@@ -467,6 +467,8 @@ export default function SalesReportPage() {
   const [selectedPayTypes, setSelectedPayTypes] = useState<string[]>([]);
   const [payTypesList, setPayTypesList] = useState<string[]>([]);
   const [groupBy, setGroupBy] = useState<SalesGroupBy>('week');
+  /** Группировка, по которой построены текущие данные; обновляется только после «Сформировать отчёт». */
+  const [groupByForData, setGroupByForData] = useState<SalesGroupBy>('week');
   const [paymentByType, setPaymentByType] = useState<{ name: string; value: number }[]>([]);
   const [departmentOrder, setDepartmentOrder] = useState<string[]>([]);
   const [orderModalOpen, setOrderModalOpen] = useState(false);
@@ -500,6 +502,7 @@ export default function SalesReportPage() {
         const loadedDeptOrder = Array.isArray(settings.departmentOrder) ? settings.departmentOrder : [];
 
         setGroupBy(loadedGroupBy);
+        setGroupByForData(loadedGroupBy);
         setSelectedDepartments(loadedDepartments);
         setSelectedPayTypes(loadedPayTypes);
         setDepartmentOrder(loadedDeptOrder);
@@ -597,6 +600,7 @@ export default function SalesReportPage() {
       }
       setRows(rowsArr);
       setOlapSummary(summaryRow && typeof summaryRow === 'object' ? summaryRow : null);
+      setGroupByForData(effectiveGroupBy);
 
       // Отдельный запрос: оплаты по типам (для круговой диаграммы)
       try {
@@ -673,7 +677,7 @@ export default function SalesReportPage() {
   };
 
   const { tableRows } = rows.length > 0
-    ? aggregateByDepartmentAndPeriod(rows, groupBy, departmentOrder.length > 0 ? departmentOrder : undefined)
+    ? aggregateByDepartmentAndPeriod(rows, groupByForData, departmentOrder.length > 0 ? departmentOrder : undefined)
     : { tableRows: [] as TableRow[] };
 
   const groupRows = tableRows.filter((r) => r.type === 'group');
@@ -710,7 +714,7 @@ export default function SalesReportPage() {
   const chartMonthData = Array.from(byPeriod.entries())
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([, p]) => ({
-      period: formatPeriodLabel(p.periodSortKey, groupBy),
+      period: formatPeriodLabel(p.periodSortKey, groupByForData),
       выручка: p.dishSum,
       чеков: p.uniqOrderId,
       блюд: p.dishAmount,
@@ -723,7 +727,7 @@ export default function SalesReportPage() {
   const chartMonthDataByPoint = sortedPeriodKeys.map((periodKey) => {
     const pointMap = byPeriodByPoint.get(periodKey)!;
     const row: Record<string, string | number> = {
-      period: formatPeriodLabel(periodKey, groupBy),
+      period: formatPeriodLabel(periodKey, groupByForData),
     };
     chartPointNames.forEach((name) => {
       row[name] = pointMap.get(name) ?? 0;
