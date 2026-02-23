@@ -1,0 +1,18 @@
+{
+  "name": "iiko-olap-reports",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Web-приложение для просмотра OLAP отчётов iiko",
+  "scripts": {
+    "dev": "concurrently -n server,client \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "build": "npm run build:server && npm run build:client",
+    "build:server": "cd server && npm run build",
+    "build:client": "cd client && npm run build",
+    "start": "cd server && npm run start"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

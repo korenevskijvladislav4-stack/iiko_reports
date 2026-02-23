@@ -1,0 +1,119 @@
+:root {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  color: #213547;
+  background: #f0f2f5;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-layout .ant-menu-dark.ant-menu-inline .ant-menu-item.ant-menu-item-selected {
+  background: linear-gradient(90deg, rgba(102, 126, 234, 0.25) 0%, rgba(118, 75, 162, 0.2) 100%) !important;
+  border-radius: 8px;
+  margin: 4px 12px;
+  width: calc(100% - 24px);
+}
+
+.app-layout .ant-menu-dark .ant-menu-item {
+  border-radius: 8px;
+  margin: 4px 12px;
+  width: calc(100% - 24px);
+  height: 44px;
+  line-height: 44px;
+}
+
+.app-layout .ant-table-wrapper .ant-table-thead > tr > th {
+  background: #fafafa;
+  font-weight: 600;
+  color: #262626;
+}
+
+/* Компактная таблица отчёта по продажам */
+.report-sales-table.ant-table-wrapper .ant-table-thead > tr > th {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.report-sales-table.ant-table-wrapper .ant-table-tbody > tr > td {
+  padding: 4px 10px;
+  font-size: 13px;
+}
+.report-sales-table.ant-table-wrapper .ant-table-tbody .report-group-row > td {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+.report-sales-table.ant-table-wrapper .ant-table-summary .report-sales-summary-row > td {
+  background: var(--ant-color-fill-quaternary);
+  border-top: 2px solid var(--ant-color-border);
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.app-layout .ant-statistic-title {
+  font-size: 13px;
+  color: #8c8c8c;
+}
+
+.app-layout .ant-statistic-content {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.app-layout .ant-table-wrapper .ant-table-tbody .report-group-row > td {
+  background: #f5f5f5 !important;
+  font-weight: 600;
+}
+
+/* Карточки отчёта — единый стиль */
+.report-dashboard-card {
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  border: 1px solid rgba(0,0,0,0.04);
+  overflow: hidden;
+}
+.report-dashboard-card .ant-card-head {
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  font-weight: 600;
+  min-height: 48px;
+}
+.report-dashboard-card .ant-card-body {
+  padding: 18px 20px;
+}
+.report-kpi-card {
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  border: none;
+  overflow: hidden;
+  position: relative;
+}
+.report-kpi-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: 4px 0 0 4px;
+}
+.report-kpi-card.report-kpi-revenue::before { background: linear-gradient(180deg, #667eea, #764ba2); }
+.report-kpi-card.report-kpi-orders::before { background: linear-gradient(180deg, #38b2ac, #319795); }
+.report-kpi-card.report-kpi-avg::before { background: linear-gradient(180deg, #ed8936, #dd6b20); }
+.report-kpi-card.report-kpi-fill::before { background: linear-gradient(180deg, #48bb78, #38a169); }
+.report-kpi-card.report-kpi-cost::before { background: linear-gradient(180deg, #0ea5e9, #06b6d4); }
+.report-kpi-card.report-kpi-margin::before { background: linear-gradient(180deg, #8b5cf6, #7c3aed); }
+.report-kpi-card .ant-card-body { padding: 16px 20px; }
+.report-kpi-card .ant-statistic-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.02em; color: #64748b; }
+.report-kpi-card .ant-statistic-content { font-size: 22px; font-weight: 700; color: #1e293b; }
+/* Tooltip графиков */
+.report-chart-tooltip {
+  padding: 10px 14px !important;
+  border-radius: 10px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12) !important;
+  border: 1px solid rgba(0,0,0,0.06) !important;
+}
