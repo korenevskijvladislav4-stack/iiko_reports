@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, Button, List, Typography, message, Popconfirm } from 'antd';
 import { DatabaseOutlined, SyncOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
-import { getPayTypes, syncPayTypes, deletePayType } from '../api/client';
+import { getPayTypes, syncPayTypes, deletePayType, getDeliveryFlagValues, syncDeliveryFlagValues } from '../api/client';
 
 function getHostKey(serverUrl: string): string {
   return serverUrl.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '') || serverUrl;
@@ -14,6 +14,9 @@ export default function ReferencesPage() {
   const [loading, setLoading] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [deliveryFlagList, setDeliveryFlagList] = useState<string[]>([]);
+  const [deliveryFlagLoading, setDeliveryFlagLoading] = useState(false);
+  const [deliveryFlagSyncLoading, setDeliveryFlagSyncLoading] = useState(false);
 
   const host = auth ? getHostKey(auth.serverUrl) : '';
 
@@ -24,6 +27,15 @@ export default function ReferencesPage() {
       .then(setPayTypesList)
       .catch(() => setPayTypesList([]))
       .finally(() => setLoading(false));
+  }, [host]);
+
+  useEffect(() => {
+    if (!host) return;
+    setDeliveryFlagLoading(true);
+    getDeliveryFlagValues(host)
+      .then(setDeliveryFlagList)
+      .catch(() => setDeliveryFlagList([]))
+      .finally(() => setDeliveryFlagLoading(false));
   }, [host]);
 
   const handleSyncPayTypes = async () => {
@@ -51,6 +63,20 @@ export default function ReferencesPage() {
       message.error(e instanceof Error ? e.message : 'Ошибка удаления');
     } finally {
       setDeleting(null);
+    }
+  };
+
+  const handleSyncDeliveryFlag = async () => {
+    if (!auth) return;
+    setDeliveryFlagSyncLoading(true);
+    try {
+      const { count } = await syncDeliveryFlagValues(auth.serverUrl, auth.token);
+      await getDeliveryFlagValues(host).then(setDeliveryFlagList);
+      message.success(`Справочник обновлён: ${count} значений «Доставка»`);
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Ошибка синхронизации');
+    } finally {
+      setDeliveryFlagSyncLoading(false);
     }
   };
 
@@ -132,6 +158,37 @@ export default function ReferencesPage() {
                 {item}
               </List.Item>
             )}
+          />
+        )}
+      </Card>
+
+      <Card
+        title="Значения фильтра «Доставка» (Delivery.IsDelivery)"
+        extra={
+          <Button
+            type="primary"
+            icon={<SyncOutlined />}
+            loading={deliveryFlagSyncLoading}
+            onClick={handleSyncDeliveryFlag}
+          >
+            Обновить
+          </Button>
+        }
+        loading={deliveryFlagLoading}
+        style={{ marginBottom: 24 }}
+      >
+        <Typography.Paragraph type="secondary" style={{ marginBottom: 12 }}>
+          Уникальные значения поля из iiko OLAP для фильтра в отчёте по продажам. Нажмите «Обновить», чтобы загрузить из iiko.
+        </Typography.Paragraph>
+        {deliveryFlagList.length === 0 && !deliveryFlagLoading ? (
+          <Typography.Text type="secondary">
+            Справочник пуст. Нажмите «Обновить», чтобы загрузить значения из iiko.
+          </Typography.Text>
+        ) : (
+          <List
+            size="small"
+            dataSource={deliveryFlagList}
+            renderItem={(item) => <List.Item>{item}</List.Item>}
           />
         )}
       </Card>

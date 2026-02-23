@@ -34,6 +34,8 @@ export default function AppLayout() {
     return <Navigate to="/login" replace />;
   }
 
+  const siderWidth = collapsed ? 80 : 240;
+
   return (
     <Layout style={{ minHeight: '100vh' }} className="app-layout">
       <Sider
@@ -42,6 +44,12 @@ export default function AppLayout() {
         collapsed={collapsed}
         width={240}
         style={{
+          position: 'fixed',
+          left: 0,
+          top: 0,
+          height: '100vh',
+          overflow: 'auto',
+          zIndex: 100,
           background: 'linear-gradient(180deg, #1a2332 0%, #0f1419 100%)',
           boxShadow: '2px 0 12px rgba(0,0,0,0.15)',
         }}
@@ -74,7 +82,7 @@ export default function AppLayout() {
           }}
         />
       </Sider>
-      <Layout>
+      <Layout style={{ marginLeft: siderWidth, minHeight: '100vh' }}>
         <Header
           style={{
             padding: '0 24px',

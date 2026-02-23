@@ -34,7 +34,7 @@ import {
 } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { fetchOlapReport, isTokenExpiredError, getSettings, saveSettings, getPayTypes } from '../api/client';
+import { fetchOlapReport, isTokenExpiredError, getSettings, saveSettings, getPayTypes, getDeliveryFlagValues } from '../api/client';
 import { formatMonthFromDate, getMonthKey } from '../utils/parseOlapXml';
 
 type SalesRow = Record<string, string | number>;
@@ -42,13 +42,14 @@ type SalesRow = Record<string, string | number>;
 const DATE_FIELD = 'OpenDate.Typed';
 const DEPT_FIELD = 'Department';
 
-/** Группировка отчёта по продажам. Поля из iiko fields.json: OpenDate.Typed, YearOpen+WeekInYearOpen, YearOpen+Mounth */
-export type SalesGroupBy = 'day' | 'week' | 'month';
+/** Группировка отчёта по продажам. Поля из iiko fields.json: OpenDate.Typed, YearOpen+WeekInYearOpen, YearOpen+Mounth, YearOpen+QuarterOpen */
+export type SalesGroupBy = 'day' | 'week' | 'month' | 'quarter';
 
 const OLAP_GROUP_BY_ROW_FIELDS: Record<SalesGroupBy, string[]> = {
   day: ['OpenDate.Typed', 'Department'],
   week: ['YearOpen', 'WeekInYearOpen', 'Department'],
   month: ['YearOpen', 'Mounth', 'Department'],
+  quarter: ['YearOpen', 'QuarterOpen', 'Department'],
 };
 
 function getFirstVal(item: SalesRow, keys: string[]): string | number | undefined {
@@ -81,6 +82,7 @@ function getFirstVal(item: SalesRow, keys: string[]): string | number | undefine
 const YEAR_KEYS = ['YearOpen', 'yearOpen', 'Year'];
 const MONTH_KEYS = ['Mounth', 'mounth', 'Month', 'month'];
 const WEEK_KEYS = ['WeekInYearOpen', 'weekInYearOpen', 'WeekInYear'];
+const QUARTER_KEYS = ['QuarterOpen', 'quarterOpen', 'Quarter'];
 const RU_MONTH_NAMES = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
 
 function parseMonthNumber(val: string | number): number {
@@ -162,6 +164,18 @@ function getPeriodKey(item: SalesRow, groupBy: SalesGroupBy): string {
     }
     return '';
   }
+  if (groupBy === 'quarter') {
+    const year = getFirstVal(item, YEAR_KEYS);
+    const quarterVal = getFirstVal(item, QUARTER_KEYS);
+    if (year != null && quarterVal != null) {
+      const y = String(year).trim();
+      const qStr = String(quarterVal).trim();
+      const qMatch = qStr.match(/Q?([1-4])/i);
+      const q = qMatch ? Number(qMatch[1]) : Number(quarterVal);
+      if (q >= 1 && q <= 4 && /^\d{4}$/.test(y)) return `${y}-Q${q}`;
+    }
+    return '';
+  }
   return getMonthKeyFromYearAndMonth(item);
 }
 
@@ -176,6 +190,11 @@ function formatPeriodLabel(periodKey: string, groupBy: SalesGroupBy): string {
   if (groupBy === 'week') {
     const m = periodKey.match(/^(\d{4})-W(\d{2})$/);
     if (m) return `Нед. ${Number(m[2])}, ${m[1]}`;
+    return periodKey;
+  }
+  if (groupBy === 'quarter') {
+    const m = periodKey.match(/^(\d{4})-Q([1-4])$/);
+    if (m) return `${m[2]} кв. ${m[1]}`;
     return periodKey;
   }
   return formatMonthFromDate(periodKey.length === 7 ? `${periodKey}-01` : periodKey);
@@ -471,6 +490,8 @@ export default function SalesReportPage() {
   const [groupByForData, setGroupByForData] = useState<SalesGroupBy>('week');
   const [paymentByType, setPaymentByType] = useState<{ name: string; value: number }[]>([]);
   const [departmentOrder, setDepartmentOrder] = useState<string[]>([]);
+  const [deliveryFilter, setDeliveryFilter] = useState<string>('');
+  const [deliveryFlagList, setDeliveryFlagList] = useState<string[]>([]);
   const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [orderModalList, setOrderModalList] = useState<string[]>([]);
   const [form] = Form.useForm();
@@ -494,9 +515,11 @@ export default function SalesReportPage() {
         }
 
         const loadedGroupBy: SalesGroupBy =
-          settings.groupBy === 'day' || settings.groupBy === 'week' || settings.groupBy === 'month'
+          settings.groupBy === 'day' || settings.groupBy === 'week' || settings.groupBy === 'month' || settings.groupBy === 'quarter'
             ? settings.groupBy
             : 'week';
+        const loadedDeliveryFilter =
+          typeof settings.deliveryFilter === 'string' ? settings.deliveryFilter : '';
         const loadedDepartments = Array.isArray(settings.selectedDepartments) ? settings.selectedDepartments : [];
         const loadedPayTypes = Array.isArray(settings.selectedPayTypes) ? settings.selectedPayTypes : [];
         const loadedDeptOrder = Array.isArray(settings.departmentOrder) ? settings.departmentOrder : [];
@@ -507,9 +530,14 @@ export default function SalesReportPage() {
         setSelectedPayTypes(loadedPayTypes);
         setDepartmentOrder(loadedDeptOrder);
 
+        const flagList = await getDeliveryFlagValues(host);
+        setDeliveryFlagList(flagList);
+        setDeliveryFilter(loadedDeliveryFilter);
+
         // После загрузки настроек сразу формируем отчёт с теми же фильтрами
         await runReport({
           groupByOverride: loadedGroupBy,
+          deliveryFilterOverride: loadedDeliveryFilter,
           selectedDepartmentsOverride: loadedDepartments,
           selectedPayTypesOverride: loadedPayTypes,
         });
@@ -522,12 +550,14 @@ export default function SalesReportPage() {
         await runReport();
       }
       getPayTypes(host).then(setPayTypesList).catch(() => setPayTypesList([]));
+      getDeliveryFlagValues(host).then(setDeliveryFlagList).catch(() => setDeliveryFlagList([]));
     })();
   }, [auth]);
 
   const runReport = async (params?: {
     defaultDates?: { from: string; to: string };
     groupByOverride?: SalesGroupBy;
+    deliveryFilterOverride?: string;
     selectedDepartmentsOverride?: string[];
     selectedPayTypesOverride?: string[];
   }) => {
@@ -536,6 +566,7 @@ export default function SalesReportPage() {
     setLoading(true);
     try {
       const effectiveGroupBy = params?.groupByOverride ?? groupBy;
+      const effectiveDeliveryFilter = params?.deliveryFilterOverride ?? deliveryFilter;
       const effectiveSelectedDepartments = params?.selectedDepartmentsOverride ?? selectedDepartments;
       const effectiveSelectedPayTypes = params?.selectedPayTypesOverride ?? selectedPayTypes;
 
@@ -549,10 +580,14 @@ export default function SalesReportPage() {
         from = formatDateForOlap(dateFrom);
         to = formatDateForOlap(dateTo);
       }
-      const filters =
-        effectiveSelectedPayTypes.length > 0
-          ? { PayTypes: { filterType: 'IncludeValues' as const, values: effectiveSelectedPayTypes } }
-          : undefined;
+      const filters: Record<string, { filterType: 'IncludeValues'; values: string[] }> = {};
+      if (effectiveSelectedPayTypes.length > 0) {
+        filters.PayTypes = { filterType: 'IncludeValues', values: effectiveSelectedPayTypes };
+      }
+      // Поле Delivery.IsDelivery: значение из справочника (загружается из iiko на странице Справочники)
+      if (effectiveDeliveryFilter && effectiveDeliveryFilter.trim()) {
+        filters['Delivery.IsDelivery'] = { filterType: 'IncludeValues', values: [effectiveDeliveryFilter.trim()] };
+      }
       const result = await fetchOlapReport({
         serverUrl: auth.serverUrl,
         token: auth.token,
@@ -561,7 +596,7 @@ export default function SalesReportPage() {
         to,
         groupByRowFields: OLAP_GROUP_BY_ROW_FIELDS[effectiveGroupBy],
         aggregateFields: ['DishSumInt', 'GuestNum', 'DishAmountInt', 'UniqOrderId', 'DishDiscountSumInt.average', 'DishAmountInt.PerOrder'],
-        filters,
+        filters: Object.keys(filters).length > 0 ? filters : undefined,
       });
 
       if (result.raw) {
@@ -648,6 +683,7 @@ export default function SalesReportPage() {
       // Сохраняем фильтры по хосту в БД; подставляем текущие настройки с сервера, чтобы не затереть порядок точек
       const host = getHostKey(auth.serverUrl);
       const toSaveGroupBy = params?.groupByOverride ?? groupBy;
+      const toSaveDeliveryFilter = effectiveDeliveryFilter;
       const toSaveDepartments = effectiveSelectedDepartments;
       const toSavePayTypes = effectiveSelectedPayTypes;
       getSettings(host)
@@ -656,6 +692,7 @@ export default function SalesReportPage() {
           dateFrom: olapDateToIso(from),
           dateTo: olapDateToIso(to),
           groupBy: toSaveGroupBy,
+          deliveryFilter: toSaveDeliveryFilter,
           selectedDepartments: toSaveDepartments.length > 0 ? toSaveDepartments : undefined,
           selectedPayTypes: toSavePayTypes.length > 0 ? toSavePayTypes : undefined,
         }))
@@ -893,80 +930,38 @@ export default function SalesReportPage() {
   }
 
   return (
-    <div style={{ maxWidth: 1400, margin: '0 auto' }}>
-      <Card
-        style={{ marginBottom: 24, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-          <div
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 10,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <BarChartOutlined style={{ fontSize: 22, color: '#fff' }} />
-          </div>
-          <div>
-            <Typography.Title level={4} style={{ margin: 0 }}>
-              Отчёт по продажам
-            </Typography.Title>
-            <Typography.Text type="secondary">По точкам и периодам (день / неделя / месяц)</Typography.Text>
-          </div>
-        </div>
-
-        <Form
-          form={form}
-          layout="inline"
-          onFinish={() => runReport()}
-          initialValues={{ dateFrom: dayjs().subtract(2, 'month'), dateTo: dayjs() }}
+    <div style={{ maxWidth: 1440, margin: '0 auto' }}>
+      {/* Заголовок и ошибка — на всю ширину */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+        <div
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 10,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
         >
-          <Form.Item name="dateFrom" label="Дата с" rules={[{ required: true }]}>
-            <DatePicker format="DD.MM.YYYY" />
-          </Form.Item>
-          <Form.Item name="dateTo" label="По" rules={[{ required: true }]}>
-            <DatePicker format="DD.MM.YYYY" />
-          </Form.Item>
-          <Form.Item label="Группировка">
-            <Select<SalesGroupBy>
-              value={groupBy}
-              onChange={setGroupBy}
-              options={[
-                { value: 'month', label: 'Месяц' },
-                { value: 'week', label: 'Неделя' },
-                { value: 'day', label: 'День' },
-              ]}
-              style={{ width: 120 }}
-            />
-          </Form.Item>
-          <Form.Item label="Тип оплаты">
-            <Select
-              mode="multiple"
-              placeholder="Все типы"
-              value={selectedPayTypes.length > 0 ? selectedPayTypes : undefined}
-              onChange={(v) => setSelectedPayTypes(v ?? [])}
-              options={payTypesList.map((p) => ({ label: p, value: p }))}
-              style={{ minWidth: 180 }}
-              allowClear
-            />
-          </Form.Item>
-          <Form.Item>
-            <Button type="primary" htmlType="submit" loading={loading} icon={<ReloadOutlined />}>
-              Сформировать отчёт
-            </Button>
-          </Form.Item>
-        </Form>
-      </Card>
+          <BarChartOutlined style={{ fontSize: 22, color: '#fff' }} />
+        </div>
+        <div>
+          <Typography.Title level={4} style={{ margin: 0 }}>
+            Отчёт по продажам
+          </Typography.Title>
+          <Typography.Text type="secondary">По точкам и периодам</Typography.Text>
+        </div>
+      </div>
 
       {error && (
         <Alert type="error" message={error} closable onClose={() => setError(null)} style={{ marginBottom: 16 }} />
       )}
 
-      {tableRows.length > 0 && (
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 24, flexWrap: 'wrap' }}>
+        {/* Основной контент — дашборд (KPI, графики, таблица) */}
+        <div style={{ flex: '1 1 0', minWidth: 0 }}>
+          {tableRows.length > 0 && (
         <>
           <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
             <Col xs={24} sm={12} md={6}>
@@ -1247,6 +1242,83 @@ export default function SalesReportPage() {
           }
         />
       </Card>
+        </div>
+
+        {/* Правый сайдбар — фильтры */}
+        <div
+          style={{
+            width: 300,
+            flexShrink: 0,
+            position: 'sticky',
+            top: 24,
+          }}
+        >
+          <Card
+            title="Параметры отчёта"
+            style={{
+              borderRadius: 12,
+              boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+              border: '1px solid #f0f0f0',
+            }}
+          >
+            <Form
+              form={form}
+              layout="vertical"
+              onFinish={() => runReport()}
+              initialValues={{ dateFrom: dayjs().subtract(2, 'month'), dateTo: dayjs() }}
+            >
+              <Form.Item name="dateFrom" label="Дата с" rules={[{ required: true }]}>
+                <DatePicker format="DD.MM.YYYY" style={{ width: '100%' }} />
+              </Form.Item>
+              <Form.Item name="dateTo" label="По" rules={[{ required: true }]}>
+                <DatePicker format="DD.MM.YYYY" style={{ width: '100%' }} />
+              </Form.Item>
+              <Form.Item label="Группировка">
+                <Select<SalesGroupBy>
+                  value={groupBy}
+                  onChange={setGroupBy}
+                  options={[
+                    { value: 'month', label: 'Месяц' },
+                    { value: 'quarter', label: 'Квартал' },
+                    { value: 'week', label: 'Неделя' },
+                    { value: 'day', label: 'День' },
+                  ]}
+                  style={{ width: '100%' }}
+                />
+              </Form.Item>
+              <Form.Item label="Доставка">
+                <Select
+                  value={deliveryFilter}
+                  onChange={(v) => setDeliveryFilter(v ?? '')}
+                  placeholder="Все"
+                  allowClear
+                  options={[
+                    { value: '', label: 'Все' },
+                    ...deliveryFlagList.map((v) => ({ value: v, label: v })),
+                  ]}
+                  style={{ width: '100%' }}
+                />
+              </Form.Item>
+              <Form.Item label="Тип оплаты">
+                <Select
+                  mode="multiple"
+                  placeholder="Все типы"
+                  value={selectedPayTypes.length > 0 ? selectedPayTypes : undefined}
+                  onChange={(v) => setSelectedPayTypes(v ?? [])}
+                  options={payTypesList.map((p) => ({ label: p, value: p }))}
+                  style={{ width: '100%' }}
+                  allowClear
+                />
+              </Form.Item>
+              <Form.Item style={{ marginBottom: 0 }}>
+                <Button type="primary" htmlType="submit" loading={loading} icon={<ReloadOutlined />} block size="large">
+                  Сформировать отчёт
+                </Button>
+              </Form.Item>
+            </Form>
+          </Card>
+        </div>
+      </div>
 
       <Modal
         title="Порядок торговых предприятий"

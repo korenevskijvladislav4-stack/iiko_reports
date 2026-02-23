@@ -1,5 +1,5 @@
 import mysql from 'mysql2/promise';
-import { CREATE_TABLE } from './schema.js';
+import { CREATE_TABLE, CREATE_DELIVERY_FLAG_TABLE } from './schema.js';
 
 let pool: mysql.Pool | null = null;
 
@@ -29,9 +29,10 @@ async function ensureTable(): Promise<void> {
   return tableReady;
 }
 
-/** Создать таблицы при старте приложения (host_filters и т.д.). */
+/** Создать таблицы при старте приложения (host_filters, delivery_flag_values и т.д.). */
 export async function ensureSchema(): Promise<void> {
   await ensureTable();
+  await getPool().query(CREATE_DELIVERY_FLAG_TABLE);
 }
 
 /** Нормализованный ключ хоста (без протокола, без слэша в конце). */
@@ -42,7 +43,9 @@ export function normalizeHostKey(host: string): string {
 export type HostFilters = {
   dateFrom?: string;   // YYYY-MM-DD
   dateTo?: string;     // YYYY-MM-DD
-  groupBy?: 'day' | 'week' | 'month';
+  groupBy?: 'day' | 'week' | 'month' | 'quarter';
+  /** Доставка: пустая = все, иначе значение из справочника Delivery.IsDelivery */
+  deliveryFilter?: string;
   selectedDepartments?: string[];
   selectedPayTypes?: string[];
   /** Порядок торговых предприятий (точек) для отчёта по продажам. */

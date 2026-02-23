@@ -67,7 +67,9 @@ export async function fetchOlapReport(payload: OlapPayload): Promise<{ data?: un
 export type HostFilters = {
   dateFrom?: string; // YYYY-MM-DD
   dateTo?: string;   // YYYY-MM-DD
-  groupBy?: 'day' | 'week' | 'month';
+  groupBy?: 'day' | 'week' | 'month' | 'quarter';
+  /** Доставка: пустая строка = все, иначе значение из справочника (Delivery.IsDelivery). */
+  deliveryFilter?: string;
   selectedDepartments?: string[];
   selectedPayTypes?: string[];
   /** Порядок торговых предприятий (точек) в таблице и графиках. */
@@ -90,6 +92,29 @@ export async function saveSettings(host: string, filters: HostFilters): Promise<
     body: JSON.stringify({ host, filters }),
   });
   if (!res.ok) throw new Error('Не удалось сохранить настройки');
+}
+
+/** Список значений поля Delivery.IsDelivery для фильтра «Доставка» (загружается из iiko через sync на странице Справочники). */
+export async function getDeliveryFlagValues(host: string): Promise<string[]> {
+  const res = await fetch(`${API_BASE}/settings/delivery-flag-values?host=${encodeURIComponent(host)}`);
+  if (!res.ok) throw new Error('Не удалось загрузить значения фильтра Доставка');
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
+
+/** Загрузить значения Delivery.IsDelivery из iiko OLAP в БД. */
+export async function syncDeliveryFlagValues(serverUrl: string, token: string): Promise<{ count: number; list: string[] }> {
+  const res = await fetch(`${API_BASE}/settings/delivery-flag-values/sync`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ serverUrl, token }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error((err as { error?: string }).error ?? 'Ошибка синхронизации');
+  }
+  const data = (await res.json()) as { count?: number; list?: string[] };
+  return { count: data.count ?? 0, list: Array.isArray(data.list) ? data.list : [] };
 }
 
 /** Список типов оплат из БД для хоста (для фильтров). */
