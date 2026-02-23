@@ -57,4 +57,17 @@ function startServer(port: number) {
     }
   });
 }
-startServer(PORT);
+
+(async () => {
+  try {
+    const { ensureSchema } = await import('./db/store.js');
+    const { ensurePayTypesTable } = await import('./db/payTypesStore.js');
+    await ensureSchema();
+    await ensurePayTypesTable();
+    console.log('[server] DB tables ready');
+  } catch (err) {
+    console.error('[server] Failed to create DB tables:', err);
+    process.exit(1);
+  }
+  startServer(PORT);
+})();

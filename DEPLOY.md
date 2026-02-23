@@ -58,45 +58,52 @@ npm run build
 
 Так собираются и сервер, и клиент. Готовый фронт лежит в `client/dist`, сервер при `NODE_ENV=production` будет отдавать его сам.
 
-## 3. Запуск через systemd
+## 3. Запуск через PM2
 
-Создайте юнит (одно приложение — один процесс):
+В проекте есть конфиг `ecosystem.config.cjs`. На VPS из **корня проекта**:
 
+**Шаг 1.** Убедитесь, что PM2 установлен:
 ```bash
-sudo nano /etc/systemd/system/iiko-reports.service
+npm install -g pm2
+# или: sudo npm install -g pm2
 ```
 
-Содержимое:
-
-```ini
-[Unit]
-Description=iiko OLAP Reports
-After=network.target mysql.service
-
-[Service]
-Type=simple
-User=www-data
-WorkingDirectory=/opt/iiko-olap-reports
-Environment=NODE_ENV=production
-Environment=PORT=3001
-ExecStart=/usr/bin/node server/dist/index.js
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
+**Шаг 2.** Запустите приложение:
+```bash
+cd /var/www/iiko_reports   # или ваш путь к проекту
+pm2 start ecosystem.config.cjs
 ```
 
-Подставьте свой путь в `WorkingDirectory`. Пользователь может быть `www-data` или отдельный (например `iiko`). Запуск:
+**Шаг 3.** Проверьте статус и порт:
+```bash
+pm2 status
+pm2 logs iiko-reports --lines 20
+curl -s http://127.0.0.1:3001/api/health
+```
+В ответ должно быть `{"ok":true}`.
+
+**Шаг 4.** Сохраните список процессов, чтобы после перезагрузки сервера PM2 сам поднял приложение:
+```bash
+pm2 save
+pm2 startup
+```
+Команда `pm2 startup` выведет строку вида `sudo env PATH=... pm2 startup ...` — её нужно выполнить (скопировать и вставить).
+
+Дальше: Nginx (раздел 4). При обновлении кода — `git pull`, `npm run build`, затем `pm2 restart iiko-reports`.
+
+---
+
+## Альтернатива: запуск через systemd
+
+Файл юнита в репозитории: `etc/systemd/iiko-reports.service`. Установка:
 
 ```bash
+sudo cp etc/systemd/iiko-reports.service /etc/systemd/system/
+# поправить WorkingDirectory в файле при необходимости
 sudo systemctl daemon-reload
 sudo systemctl enable iiko-reports
 sudo systemctl start iiko-reports
-sudo systemctl status iiko-reports
 ```
-
-Логи: `journalctl -u iiko-reports -f`.
 
 ## 4. Nginx (обратный прокси)
 
@@ -131,11 +138,11 @@ sudo certbot --nginx -d ваш-домен.ru
 ## 5. Обновление после изменений в коде
 
 ```bash
-cd /opt/iiko-olap-reports
-sudo -u www-data git pull   # или ваш пользователь
+cd /var/www/iiko_reports   # или ваш путь
+git pull
 npm install
 npm run build
-sudo systemctl restart iiko-reports
+pm2 restart iiko-reports
 ```
 
 ## Кратко

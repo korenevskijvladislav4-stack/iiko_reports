@@ -21,6 +21,11 @@ async function ensureTable(): Promise<void> {
   return tableReady;
 }
 
+/** Создать таблицу pay_types при старте приложения. */
+export async function ensurePayTypesTable(): Promise<void> {
+  await ensureTable();
+}
+
 export async function getPayTypes(host: string): Promise<string[]> {
   await ensureTable();
   const key = normalizeHostKey(host);

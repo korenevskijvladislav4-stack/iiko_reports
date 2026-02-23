@@ -29,6 +29,11 @@ async function ensureTable(): Promise<void> {
   return tableReady;
 }
 
+/** Создать таблицы при старте приложения (host_filters и т.д.). */
+export async function ensureSchema(): Promise<void> {
+  await ensureTable();
+}
+
 /** Нормализованный ключ хоста (без протокола, без слэша в конце). */
 export function normalizeHostKey(host: string): string {
   return host.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '') || host;
