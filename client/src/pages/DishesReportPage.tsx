@@ -606,7 +606,7 @@ export default function DishesReportPage() {
                     <Typography.Text type="secondary">Нет данных</Typography.Text>
                   ) : (
                     <Space direction="vertical" style={{ width: '100%' }} size="middle">
-                      {catSorted.map(([name, rev], i) => {
+                      {catSorted.map(([name, rev]) => {
                         const pct = (rev / catMax) * 100;
                         return (
                           <div key={name}>

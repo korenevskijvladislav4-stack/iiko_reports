@@ -21,8 +21,6 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import {
   ResponsiveContainer,
-  BarChart,
-  Bar,
   LineChart,
   Line,
   PieChart,
@@ -129,7 +127,7 @@ function getMonthKeyFromYearAndMonth(item: SalesRow): string {
     // Порядок колонок [Department, Year, Month]: YearOpen=департамент, Mounth=год, Department=месяц
     if (Number(monthVal) >= 1900 && Number(monthVal) <= 2100 && parseMonthNumber(monthVal) === 0) {
       const monthFromOther = getFirstVal(item, ['Department', 'department']);
-      const mOther = parseMonthNumber(monthFromOther);
+      const mOther = parseMonthNumber(monthFromOther ?? 0);
       if (mOther >= 1 && mOther <= 12) return `${Number(monthVal)}-${String(mOther).padStart(2, '0')}`;
     }
     if (/^\d{2}$/.test(y)) y = Number(y) >= 50 ? `19${y}` : `20${y}`;
@@ -186,8 +184,6 @@ function formatPeriodLabel(periodKey: string, groupBy: SalesGroupBy): string {
 const DISH_KEYS = ['DishAmountInt', 'dishAmountInt', 'DishAmount.Int', 'DishAmount', 'Amount.Int', 'dishAmount'];
 const SUM_KEYS = ['DishSumInt', 'dishSumInt', 'DishDiscountSumInt', 'dishDiscountSumInt', 'DishDiscountSumInt.withoutVAT', 'OrderSum', 'orderSum'];
 const ORDER_KEYS = ['UniqOrderId', 'uniqOrderId', 'UniqOrderId.Int', 'VoucherNum', 'voucherNum'];
-const GUEST_KEYS = ['GuestNum', 'guestNum', 'GuestNum.Int'];
-const RETURN_KEYS = ['DishReturnSum', 'dishReturnSum', 'DishReturnSum.withoutVAT'];
 const AVG_CHECK_KEYS = ['DishDiscountSumInt.average', 'dishDiscountSumInt.average', 'DishSumInt.average', 'dishSumInt.average'];
 const AVG_FILL_KEYS = ['DishAmountInt.PerOrder', 'DishAmountInt.perOrder', 'dishAmountInt.PerOrder', 'dishAmountInt.perOrder'];
 
@@ -348,9 +344,9 @@ type TableRow = {
   periodSortKey?: string;
   dishAmount: number;
   uniqOrderId: number;
-  guestNum: number;
+  guestNum?: number;
   dishSum: number;
-  dishReturnSum: number;
+  dishReturnSum?: number;
   avgCheck: number;
   avgFill: number;
   ranges?: Ranges;
@@ -1041,11 +1037,11 @@ export default function SalesReportPage() {
                   <LineChart data={chartMonthDataByPoint} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
                     <XAxis dataKey="period" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                    <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${(Number(v) / 1000).toFixed(0)}k`} stroke="#94a3b8" />
+                    <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: unknown) => `${(Number(v) / 1000).toFixed(0)}k`} stroke="#94a3b8" />
                     <Tooltip
                       contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.12)', padding: '12px 16px' }}
                       formatter={(v: number, name: string) => [formatCurrency(v), name]}
-                      labelFormatter={(l) => `Период: ${l}`}
+                      labelFormatter={(l: unknown) => `Период: ${l}`}
                     />
                     <Legend wrapperStyle={{ paddingTop: 8 }} iconType="line" iconSize={10} />
                     {chartPointNames.map((pointName, i) => (
@@ -1078,7 +1074,7 @@ export default function SalesReportPage() {
                       innerRadius={64}
                       outerRadius={104}
                       paddingAngle={3}
-                      label={({ точка, percent }) => `${точка} ${(percent * 100).toFixed(0)}%`}
+                      label={({ точка, percent }: { точка: string; percent: number }) => `${точка} ${(percent * 100).toFixed(0)}%`}
                     >
                       {chartDeptData.map((_, i) => (
                         <Cell key={i} fill={['#667eea', '#764ba2', '#9f7aea', '#38b2ac', '#ed8936', '#e53e3e', '#805ad5'][i % 7]} stroke="#fff" strokeWidth={2} />
@@ -1104,7 +1100,7 @@ export default function SalesReportPage() {
                   <LineChart data={chartMonthData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
                     <XAxis dataKey="period" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                    <YAxis yAxisId="left" tick={{ fontSize: 11 }} tickCount={6} allowDecimals={false} tickFormatter={(v) => (Number(v) >= 1000 ? `${(Number(v) / 1000).toFixed(1)}k` : String(Math.round(Number(v))))} stroke="#94a3b8" />
+                    <YAxis yAxisId="left" tick={{ fontSize: 11 }} tickCount={6} allowDecimals={false} tickFormatter={(v: unknown) => (Number(v) >= 1000 ? `${(Number(v) / 1000).toFixed(1)}k` : String(Math.round(Number(v))))} stroke="#94a3b8" />
                     <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} stroke="#94a3b8" />
                     <Tooltip
                       contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.12)', padding: '12px 16px' }}
@@ -1112,7 +1108,7 @@ export default function SalesReportPage() {
                         const isAvgCheck = name === 'Средний чек';
                         return [isAvgCheck ? formatCurrency(v) : Number(v).toFixed(2), isAvgCheck ? 'Средний чек' : 'Наполняемость'];
                       }}
-                      labelFormatter={(l) => `Период: ${l}`}
+                      labelFormatter={(l: unknown) => `Период: ${l}`}
                     />
                     <Legend wrapperStyle={{ paddingTop: 8 }} iconType="line" iconSize={10} />
                     <Line yAxisId="left" type="monotone" dataKey="среднийЧек" stroke="#667eea" name="Средний чек" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
@@ -1142,7 +1138,7 @@ export default function SalesReportPage() {
                         innerRadius={64}
                         outerRadius={104}
                         paddingAngle={3}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }: { name: string; percent: number }) => `${name} ${(percent * 100).toFixed(0)}%`}
                       >
                         {paymentByType.map((_, i) => (
                           <Cell key={i} fill={['#667eea', '#764ba2', '#9f7aea', '#38b2ac', '#ed8936', '#e53e3e', '#805ad5'][i % 7]} stroke="#fff" strokeWidth={2} />
