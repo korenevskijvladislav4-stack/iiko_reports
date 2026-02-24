@@ -1,96 +1,765 @@
 :root {
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: 'Plus Jakarta Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
   line-height: 1.5;
-  color: #213547;
-  background: #f0f2f5;
+  color: #f8fafc;
+  background: #0b1220;
+  --premium-bg: #0b1220;
+  --premium-surface: rgba(15, 23, 42, 0.85);
+  --premium-border: rgba(148, 163, 184, 0.35);
+  --premium-glow-cyan: rgba(34, 211, 238, 0.4);
+  --premium-glow-indigo: rgba(99, 102, 241, 0.4);
+  --premium-text: #f8fafc;
+  --premium-muted: #94a3b8;
+  --premium-accent: #22d3ee;
+  --premium-accent-end: #6366f1;
+  --shadow-soft: 0 4px 24px rgba(15, 23, 42, 0.08);
+  --shadow-card: 0 20px 60px rgba(15, 23, 42, 0.12);
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+  background: #0b1220;
+  color: #f8fafc;
+  -webkit-font-smoothing: antialiased;
 }
 
 #root {
   min-height: 100vh;
+  background: #0b1220;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.saas-fade-in {
+  opacity: 0;
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.saas-fade-in-delay-1 { animation-delay: 0.08s; }
+.saas-fade-in-delay-2 { animation-delay: 0.16s; }
+.saas-fade-in-delay-3 { animation-delay: 0.24s; }
+.saas-fade-in-delay-4 { animation-delay: 0.32s; }
+.saas-fade-in-delay-5 { animation-delay: 0.4s; }
+
+.report-dashboard-card {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.report-dashboard-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-card);
+}
+
+/* ——— Сайдбар ——— */
+.app-layout-sider {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+}
+.app-layout-sider::-webkit-scrollbar {
+  width: 6px;
+}
+.app-layout-sider::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 3px;
+}
+
+.app-layout-logo {
+  height: 72px;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+.app-layout-sider.ant-layout-sider-collapsed .app-layout-logo {
+  padding: 0;
+  justify-content: center;
+}
+.app-layout-sider.ant-layout-sider-collapsed .app-layout-logo a {
+  justify-content: center;
+}
+.app-layout-logo-text {
+  color: var(--premium-text);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+.app-layout-logo a:hover .app-layout-logo-text {
+  color: #fff;
+}
+
+.app-layout-nav-label {
+  padding: 12px 20px 4px;
+  min-height: 28px;
 }
 
 .app-layout .ant-menu-dark.ant-menu-inline .ant-menu-item.ant-menu-item-selected {
-  background: linear-gradient(90deg, rgba(102, 126, 234, 0.25) 0%, rgba(118, 75, 162, 0.2) 100%) !important;
-  border-radius: 8px;
-  margin: 4px 12px;
-  width: calc(100% - 24px);
-}
-
-.app-layout .ant-menu-dark .ant-menu-item {
-  border-radius: 8px;
-  margin: 4px 12px;
-  width: calc(100% - 24px);
-  height: 44px;
-  line-height: 44px;
-}
-
-.app-layout .ant-table-wrapper .ant-table-thead > tr > th {
-  background: #fafafa;
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.2) 0%, rgba(99, 102, 241, 0.2) 100%) !important;
+  border-radius: 12px;
+  margin: 4px 8px;
+  width: calc(100% - 16px);
+  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.2);
   font-weight: 600;
-  color: #262626;
+}
+.app-layout .ant-menu-dark .ant-menu-item {
+  border-radius: 12px;
+  margin: 4px 8px;
+  width: calc(100% - 16px);
+  height: 46px;
+  line-height: 46px;
+  transition: background 0.2s, color 0.2s;
+}
+.app-layout .ant-menu-dark .ant-menu-item:hover {
+  background: rgba(148, 163, 184, 0.12) !important;
+  color: #f8fafc !important;
 }
 
-/* Компактная таблица отчёта по продажам */
-.report-sales-table.ant-table-wrapper .ant-table-thead > tr > th {
-  padding: 6px 10px;
-  font-size: 12px;
+/* ——— Шапка (в стиле страницы входа: тёмное стекло) ——— */
+.app-layout-header {
+  padding: 0 28px !important;
+  height: 64px !important;
+  line-height: 64px !important;
+  background: linear-gradient(165deg, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.88) 100%) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  box-shadow: 0 1px 0 rgba(148, 163, 184, 0.15);
+  border-bottom: 1px solid var(--premium-border);
 }
-.report-sales-table.ant-table-wrapper .ant-table-tbody > tr > td {
-  padding: 4px 10px;
-  font-size: 13px;
+.app-layout-trigger {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  color: var(--premium-muted) !important;
+  font-size: 18px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
-.report-sales-table.ant-table-wrapper .ant-table-tbody .report-group-row > td {
-  padding: 5px 10px;
-  font-size: 12px;
+.app-layout-trigger:hover {
+  background: rgba(34, 211, 238, 0.12) !important;
+  color: var(--premium-accent) !important;
 }
-.report-sales-table.ant-table-wrapper .ant-table-summary .report-sales-summary-row > td {
-  background: var(--ant-color-fill-quaternary);
-  border-top: 2px solid var(--ant-color-border);
-  padding: 6px 10px;
-  font-size: 12px;
+.app-layout-header .ant-typography {
+  color: var(--premium-text) !important;
+}
+.app-layout-header .ant-divider {
+  border-color: rgba(148, 163, 184, 0.25);
+}
+.app-layout-server-tag {
+  margin: 0 !important;
+  padding: 6px 14px !important;
+  font-size: 12px !important;
+  color: #cbd5e1 !important;
+  background: rgba(15, 23, 42, 0.8) !important;
+  border: 1px solid var(--premium-border) !important;
+  border-radius: 999px !important;
+  font-weight: 500;
+}
+.app-layout-logout {
+  height: 38px !important;
+  padding: 0 14px !important;
+  border-radius: 10px !important;
+  color: var(--premium-muted) !important;
+  font-size: 13px !important;
+  font-weight: 500;
+}
+.app-layout-logout:hover {
+  background: rgba(239, 68, 68, 0.2) !important;
+  color: #fca5a5 !important;
+}
+
+/* ——— Контент (фон как на странице входа) ——— */
+.app-layout-content {
+  margin: 0 !important;
+  min-height: calc(100vh - 64px) !important;
+  background:
+    linear-gradient(165deg, #020617 0%, #0b1220 40%, #0f172a 100%),
+    radial-gradient(ellipse 120% 80% at 0% 0%, rgba(34, 211, 238, 0.1) 0, transparent 50%),
+    radial-gradient(ellipse 100% 70% at 100% 0%, rgba(99, 102, 241, 0.12) 0, transparent 50%),
+    radial-gradient(ellipse 80% 60% at 0% 100%, rgba(236, 72, 153, 0.06) 0, transparent 50%) !important;
+  padding: 28px !important;
+}
+
+/* Формы, инпуты, кнопки, алерты в светлой теме */
+:root[data-theme='light'] .app-layout-content .ant-input,
+:root[data-theme='light'] .app-layout-content .ant-input-affix-wrapper,
+:root[data-theme='light'] .app-layout-content .ant-picker,
+:root[data-theme='light'] .app-layout-content .ant-select-selector {
+  background: #ffffff !important;
+  border-color: rgba(148, 163, 184, 0.6) !important;
+  color: var(--premium-text) !important;
+}
+:root[data-theme='light'] .app-layout-content .ant-input::placeholder,
+:root[data-theme='light'] .app-layout-content .ant-input-affix-wrapper input::placeholder {
+  color: var(--premium-muted);
+}
+:root[data-theme='light'] .app-layout-content .ant-btn-default {
+  background: #ffffff !important;
+  border-color: rgba(148, 163, 184, 0.6) !important;
+  color: #111827 !important;
+}
+:root[data-theme='light'] .app-layout-content .ant-btn-default:hover {
+  background: #e5e7eb !important;
+  border-color: rgba(55, 65, 81, 0.9) !important;
+  color: #111827 !important;
+}
+:root[data-theme='light'] .app-layout-content .ant-alert {
+  background: #fef2f2 !important;
+  border-color: #fecaca !important;
+}
+:root[data-theme='light'] .app-layout-content .ant-alert-message {
+  color: #b91c1c;
+}
+
+/* Панель фильтров отчёта в светлой теме */
+:root[data-theme='light'] .sales-filters-panel {
+  background: #ffffff !important;
+  border-color: rgba(148, 163, 184, 0.6) !important;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08) !important;
+}
+:root[data-theme='light'] .sales-quick-period-chip {
+  background: #f3f4f6;
+  color: var(--premium-muted);
+}
+:root[data-theme='light'] .sales-quick-period-chip:hover {
+  background: #e5e7eb;
+}
+:root[data-theme='light'] .sales-quick-period-chip.active {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.18) 0%, rgba(79, 70, 229, 0.18) 100%);
+  color: #111827;
+}
+
+/* Карточки и ховер‑эффекты на главной в светлой теме */
+:root[data-theme='light'] .home-hero-card {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(56, 189, 248, 0.2), transparent),
+    linear-gradient(145deg, #ffffff 0%, #e5e7eb 40%, #e5e7eb 100%) !important;
+}
+:root[data-theme='light'] .home-what-next-item {
+  background: #ffffff !important;
+  border-color: rgba(148, 163, 184, 0.5) !important;
+}
+:root[data-theme='light'] .home-what-next-item:hover {
+  background: #f3f4f6 !important;
+  border-color: rgba(37, 99, 235, 0.6) !important;
+}
+
+/* ——— Контент: все компоненты Ant Design в тёмном стиле ——— */
+.app-layout-content .ant-card {
+  background: linear-gradient(160deg, rgba(15, 23, 42, 0.92) 0%, rgba(15, 23, 42, 0.78) 100%) !important;
+  border: 1px solid var(--premium-border) !important;
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.1), 0 20px 50px rgba(0, 0, 0, 0.35) !important;
+  color: var(--premium-text);
+}
+.app-layout-content .ant-card .ant-card-head {
+  border-bottom-color: var(--premium-border) !important;
+  color: var(--premium-text) !important;
+}
+.app-layout-content .ant-card .ant-card-head-title {
+  color: var(--premium-text) !important;
+  font-weight: 600;
+}
+.app-layout-content .ant-card .ant-card-body {
+  color: var(--premium-muted);
+}
+.app-layout-content .ant-typography {
+  color: inherit;
+}
+.app-layout-content .ant-typography.ant-typography-secondary {
+  color: var(--premium-muted) !important;
+}
+
+.app-layout-content .ant-table-wrapper {
+  color: var(--premium-text);
+}
+.app-layout-content .ant-table-wrapper .ant-table-thead > tr > th {
+  background: rgba(15, 23, 42, 0.95) !important;
+  border-bottom-color: var(--premium-border) !important;
+  color: var(--premium-muted) !important;
+  font-weight: 600;
+}
+.app-layout-content .ant-table-wrapper .ant-table-tbody > tr > td {
+  border-bottom-color: rgba(148, 163, 184, 0.15) !important;
+  color: var(--premium-text);
+  background: rgba(15, 23, 42, 0.4) !important;
+}
+.app-layout-content .ant-table-wrapper .ant-table-tbody > tr:hover > td {
+  background: rgba(34, 211, 238, 0.06) !important;
+}
+.app-layout-content .ant-table-wrapper .ant-table-tbody .report-group-row > td {
+  background: rgba(15, 23, 42, 0.7) !important;
+  font-weight: 600;
+  color: var(--premium-text);
+}
+.app-layout-content .ant-table-wrapper .ant-table-summary .report-sales-summary-row > td {
+  background: rgba(34, 211, 238, 0.08) !important;
+  border-top: 1px solid var(--premium-border);
+  color: var(--premium-text);
+  font-weight: 600;
 }
 
 .app-layout .ant-statistic-title {
   font-size: 13px;
-  color: #8c8c8c;
+  color: var(--premium-muted) !important;
 }
-
-.app-layout .ant-statistic-content {
+.app-layout-content .ant-statistic-content {
   font-size: 20px;
   font-weight: 600;
+  color: var(--premium-text) !important;
 }
 
-.app-layout .ant-table-wrapper .ant-table-tbody .report-group-row > td {
-  background: #f5f5f5 !important;
+.app-layout-content .ant-form-item-label > label {
+  color: var(--premium-muted) !important;
+}
+.app-layout-content .ant-input,
+.app-layout-content .ant-input-affix-wrapper,
+.app-layout-content .ant-picker,
+.app-layout-content .ant-select-selector {
+  background: rgba(15, 23, 42, 0.8) !important;
+  border-color: var(--premium-border) !important;
+  color: var(--premium-text) !important;
+}
+.app-layout-content .ant-input::placeholder,
+.app-layout-content .ant-input-affix-wrapper input::placeholder {
+  color: var(--premium-muted);
+}
+.app-layout-content .ant-select-selection-placeholder,
+.app-layout-content .ant-select-selection-item {
+  color: var(--premium-text) !important;
+}
+.app-layout-content .ant-picker-input > input {
+  color: var(--premium-text) !important;
+}
+.app-layout-content .ant-btn-default {
+  background: rgba(15, 23, 42, 0.8) !important;
+  border-color: var(--premium-border) !important;
+  color: var(--premium-text) !important;
+}
+.app-layout-content .ant-btn-default:hover {
+  background: rgba(34, 211, 238, 0.15) !important;
+  border-color: var(--premium-accent) !important;
+  color: var(--premium-accent) !important;
+}
+.app-layout-content .ant-btn-primary {
+  background: linear-gradient(135deg, #22d3ee 0%, #6366f1 100%) !important;
+  border: none !important;
+  color: #0f172a !important;
   font-weight: 600;
 }
+.app-layout-content .ant-list-item {
+  border-bottom-color: var(--premium-border) !important;
+  color: var(--premium-text);
+}
+.app-layout-content .ant-alert {
+  background: rgba(15, 23, 42, 0.9) !important;
+  border-color: var(--premium-border) !important;
+}
+.app-layout-content .ant-alert-message {
+  color: var(--premium-text);
+}
 
-/* Карточки отчёта — единый стиль */
-.report-dashboard-card {
-  border-radius: 14px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-  border: 1px solid rgba(0,0,0,0.04);
+/* Выпадающие списки Select/DatePicker (портал) — тёмные */
+.ant-select-dropdown {
+  background: rgba(15, 23, 42, 0.98) !important;
+  border: 1px solid var(--premium-border) !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5) !important;
+}
+.ant-select-dropdown .ant-select-item {
+  color: var(--premium-text);
+}
+.ant-select-dropdown .ant-select-item-option-active,
+.ant-select-dropdown .ant-select-item-option-selected {
+  background: rgba(34, 211, 238, 0.12) !important;
+  color: var(--premium-text);
+}
+.ant-picker-dropdown,
+.ant-picker-dropdown .ant-picker-panel-container,
+.ant-picker-dropdown .ant-picker-panel {
+  background: rgba(15, 23, 42, 0.98) !important;
+  border: 1px solid var(--premium-border) !important;
+}
+.ant-picker-dropdown .ant-picker-header,
+.ant-picker-dropdown .ant-picker-content th {
+  color: var(--premium-muted);
+}
+.ant-picker-dropdown .ant-picker-cell {
+  color: var(--premium-muted);
+}
+.ant-picker-dropdown .ant-picker-cell-in-view {
+  color: var(--premium-text);
+}
+.ant-picker-dropdown .ant-picker-cell:hover .ant-picker-cell-inner {
+  background: rgba(34, 211, 238, 0.12) !important;
+}
+.ant-picker-dropdown .ant-picker-header button {
+  color: var(--premium-muted);
+}
+.ant-picker-dropdown .ant-picker-header button:hover {
+  color: var(--premium-text);
+}
+
+/* ——— Панель фильтров отчёта по продажам ——— */
+.sales-filters-panel {
+  border-radius: var(--radius-xl);
   overflow: hidden;
+  background: linear-gradient(165deg, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.82) 100%) !important;
+  border: 1px solid var(--premium-border);
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.12), 0 24px 56px rgba(0, 0, 0, 0.35);
+}
+.sales-filters-panel .ant-card-head {
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--premium-border);
+  min-height: auto;
+}
+.sales-filters-panel .ant-card-head-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--premium-text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sales-filters-panel .ant-card-body {
+  padding: 20px 22px 24px;
+}
+.sales-filters-section {
+  margin-bottom: 20px;
+}
+.sales-filters-section:last-of-type {
+  margin-bottom: 0;
+}
+.sales-filters-section-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--premium-muted);
+  margin-bottom: 10px;
+}
+.sales-filters-section-label .anticon {
+  font-size: 13px;
+  color: var(--premium-accent);
+}
+.sales-quick-periods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.sales-quick-period-chip {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 10px;
+  border: 1px solid var(--premium-border);
+  background: rgba(15, 23, 42, 0.6);
+  color: var(--premium-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.sales-quick-period-chip:hover {
+  border-color: rgba(34, 211, 238, 0.5);
+  color: var(--premium-text);
+  background: rgba(34, 211, 238, 0.08);
+}
+.sales-quick-period-chip.active {
+  border-color: var(--premium-accent);
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.2) 0%, rgba(99, 102, 241, 0.2) 100%);
+  color: var(--premium-text);
+}
+.sales-filters-panel .ant-form-item {
+  margin-bottom: 16px;
+}
+.sales-filters-panel .ant-form-item:last-child {
+  margin-bottom: 0;
+}
+.sales-filters-panel .ant-form-item-label > label {
+  font-size: 12px;
+  color: var(--premium-muted);
+}
+.sales-filters-submit {
+  margin-top: 22px;
+  height: 46px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #22d3ee 0%, #6366f1 100%) !important;
+  border: none !important;
+  box-shadow: 0 8px 24px rgba(34, 211, 238, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+.sales-filters-submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(34, 211, 238, 0.45) !important;
+}
+
+/* ——— Таблица отчёта по продажам (премиум, тёмная) ——— */
+.sales-table-wrap {
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  border: 1px solid var(--premium-border);
+  background: linear-gradient(160deg, rgba(15, 23, 42, 0.96) 0%, rgba(15, 23, 42, 0.88) 100%) !important;
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.12), 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+.sales-table-wrap .ant-card-head {
+  background: rgba(15, 23, 42, 0.98) !important;
+  border-bottom: 1px solid var(--premium-border) !important;
+  color: var(--premium-text) !important;
+}
+.sales-table-wrap .ant-card-body {
+  background: transparent !important;
+  padding: 0 !important;
+  color: var(--premium-text);
+}
+/* Убираем белый фон у всех слоёв таблицы Ant Design */
+.sales-table-wrap .ant-table-wrapper,
+.sales-table-wrap .ant-spin-nested-loading,
+.sales-table-wrap .ant-spin-container,
+.sales-table-wrap .ant-table,
+.sales-table-wrap .ant-table-container,
+.sales-table-wrap .ant-table-content,
+.sales-table-wrap .ant-table-body,
+.sales-table-wrap .ant-table-thead > tr > th,
+.sales-table-wrap .ant-table-tbody > tr > td,
+.sales-table-wrap table {
+  background: transparent !important;
+}
+.sales-table-wrap .ant-table-wrapper {
+  border-radius: inherit;
+  color: var(--premium-text);
+}
+/* Пустое состояние и загрузка — тёмный фон (не белый) */
+.sales-table-wrap .ant-table-placeholder,
+.sales-table-wrap .ant-table-tbody > tr.ant-table-placeholder > td {
+  background: rgba(15, 23, 42, 0.5) !important;
+  border-bottom: 1px solid var(--premium-border) !important;
+  color: var(--premium-muted) !important;
+}
+.sales-table-wrap .ant-empty {
+  color: var(--premium-muted);
+}
+.sales-table-wrap .ant-empty .ant-empty-description {
+  color: var(--premium-muted) !important;
+}
+.sales-table-wrap .ant-empty .ant-empty-image svg {
+  fill: var(--premium-muted);
+  opacity: 0.6;
+}
+.sales-table-wrap .ant-spin-dot-item {
+  background-color: var(--premium-accent) !important;
+}
+.sales-table-wrap .ant-spin-text {
+  color: var(--premium-muted) !important;
+}
+/* Шапка таблицы */
+.sales-table-wrap .ant-table-thead > tr > th {
+  padding: 14px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--premium-muted) !important;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.95) 100%) !important;
+  border-bottom: 2px solid var(--premium-border) !important;
+  border-right: 1px solid rgba(148, 163, 184, 0.15) !important;
+}
+.sales-table-wrap .ant-table-thead > tr > th:last-child {
+  border-right: none !important;
+}
+/* Строки данных — фон только для ячеек без условного форматирования */
+.sales-table-wrap .ant-table-tbody > tr > td {
+  padding: 10px 16px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--premium-text) !important;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12) !important;
+  border-right: 1px solid rgba(148, 163, 184, 0.08) !important;
+  transition: background 0.15s ease;
+}
+.sales-table-wrap .ant-table-tbody > tr > td {
+  background: rgba(15, 23, 42, 0.4);
+}
+.sales-table-wrap .ant-table-tbody > tr > td:last-child {
+  border-right: none !important;
+}
+/* Чересполосица */
+.sales-table-wrap .ant-table-tbody > tr:nth-child(even):not(.report-group-row) > td {
+  background: rgba(30, 41, 59, 0.35);
+}
+.sales-table-wrap .ant-table-tbody > tr:hover > td {
+  background: rgba(34, 211, 238, 0.12) !important;
+}
+/* Строки-группы (по точкам) */
+.sales-table-wrap .ant-table-tbody .report-group-row > td {
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--premium-text) !important;
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.18) 0%, rgba(15, 23, 42, 0.9) 24px, rgba(30, 41, 59, 0.85) 100%) !important;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25) !important;
+}
+.sales-table-wrap .ant-table-tbody .report-group-row > td:first-child {
+  padding-left: 18px;
+  border-left: 4px solid var(--premium-accent);
+}
+/* Итоговая строка — тёмный фон (tfoot и summary, т.к. Ant Design рендерит по-разному) */
+.sales-table-wrap tr.report-sales-summary-row td,
+.sales-table-wrap .ant-table-summary .report-sales-summary-row > td,
+.sales-table-wrap tfoot tr.report-sales-summary-row td,
+.sales-table-wrap .ant-table-summary tr.report-sales-summary-row td,
+.sales-table-wrap tfoot .report-sales-summary-row td {
+  padding: 14px 16px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: var(--premium-text) !important;
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.2) 0%, rgba(99, 102, 241, 0.15) 100%) !important;
+  border-top: 2px solid var(--premium-accent) !important;
+  border-bottom: none !important;
+  border-right: 1px solid rgba(148, 163, 184, 0.12) !important;
+}
+.sales-table-wrap .ant-table-summary .report-sales-summary-row > td:first-child,
+.sales-table-wrap tfoot tr.report-sales-summary-row td:first-child {
+  font-size: 12px !important;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+/* Контейнер итога (tfoot) — убрать белый фон */
+.sales-table-wrap tfoot,
+.sales-table-wrap .ant-table-summary {
+  background: transparent !important;
+}
+.sales-table-wrap tfoot tr {
+  background: transparent !important;
+}
+/* Скроллбар внутри таблицы */
+.sales-table-wrap .ant-table-body::-webkit-scrollbar {
+  height: 8px;
+}
+.sales-table-wrap .ant-table-body::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 4px;
+}
+.sales-table-wrap .ant-table-body::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 4px;
+}
+.sales-table-wrap .ant-table-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 211, 238, 0.5);
+}
+/* Фиксированная колонка — тот же тёмный фон */
+.sales-table-wrap .ant-table-cell-fix-left,
+.sales-table-wrap .ant-table-cell-fix-right {
+  background: rgba(15, 23, 42, 0.4) !important;
+}
+.sales-table-wrap .ant-table-tbody .report-group-row .ant-table-cell-fix-left {
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.18) 0%, rgba(15, 23, 42, 0.9) 24px, rgba(30, 41, 59, 0.85) 100%) !important;
+}
+.sales-table-wrap tr.report-sales-summary-row .ant-table-cell-fix-left,
+.sales-table-wrap .ant-table-summary .report-sales-summary-row .ant-table-cell-fix-left {
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.2) 0%, rgba(99, 102, 241, 0.15) 100%) !important;
+}
+.sales-table-wrap .ant-table-thead .ant-table-cell-fix-left {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.95) 100%) !important;
+}
+
+/* Карточки на главной — стекло как на странице входа */
+.report-dashboard-card {
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--premium-border) !important;
+  overflow: hidden;
+  background: linear-gradient(160deg, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0.75) 100%) !important;
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.15), 0 20px 50px rgba(0, 0, 0, 0.3) !important;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.2s ease;
+}
+.report-dashboard-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.3), 0 24px 60px rgba(0, 0, 0, 0.4) !important;
+  border-color: rgba(34, 211, 238, 0.35) !important;
 }
 .report-dashboard-card .ant-card-head {
-  border-bottom: 1px solid rgba(0,0,0,0.06);
+  border-bottom: 1px solid var(--premium-border);
   font-weight: 600;
   min-height: 48px;
+  color: var(--premium-text);
 }
 .report-dashboard-card .ant-card-body {
   padding: 18px 20px;
+  color: var(--premium-muted);
+}
+.report-dashboard-card .ant-typography {
+  color: inherit;
+}
+.home-hero-card {
+  position: relative;
+  overflow: hidden;
+}
+.home-hero-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(34, 211, 238, 0.15), transparent);
+  pointer-events: none;
+}
+
+.home-what-next-item:hover {
+  border-color: rgba(34, 211, 238, 0.4) !important;
+  background: rgba(15, 23, 42, 0.85) !important;
+}
+
+/* Хедеры отчётных страниц (общий класс) */
+.report-page-hero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 20px 24px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--premium-border);
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.6) 0%, rgba(15, 23, 42, 0.4) 100%);
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.1), 0 12px 40px rgba(0, 0, 0, 0.2);
+}
+:root[data-theme='light'] .report-page-hero {
+  background: linear-gradient(145deg, #ffffff 0%, #e5e7eb 70%);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
 }
 .report-kpi-card {
   border-radius: 14px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-  border: none;
+  border: 1px solid var(--premium-border) !important;
   overflow: hidden;
   position: relative;
+  background: linear-gradient(160deg, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0.75) 100%) !important;
 }
 .report-kpi-card::before {
   content: '';
@@ -101,19 +770,167 @@ body {
   width: 4px;
   border-radius: 4px 0 0 4px;
 }
-.report-kpi-card.report-kpi-revenue::before { background: linear-gradient(180deg, #667eea, #764ba2); }
+.report-kpi-card.report-kpi-revenue::before { background: linear-gradient(180deg, #22d3ee, #6366f1); }
 .report-kpi-card.report-kpi-orders::before { background: linear-gradient(180deg, #38b2ac, #319795); }
 .report-kpi-card.report-kpi-avg::before { background: linear-gradient(180deg, #ed8936, #dd6b20); }
 .report-kpi-card.report-kpi-fill::before { background: linear-gradient(180deg, #48bb78, #38a169); }
 .report-kpi-card.report-kpi-cost::before { background: linear-gradient(180deg, #0ea5e9, #06b6d4); }
 .report-kpi-card.report-kpi-margin::before { background: linear-gradient(180deg, #8b5cf6, #7c3aed); }
 .report-kpi-card .ant-card-body { padding: 16px 20px; }
-.report-kpi-card .ant-statistic-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.02em; color: #64748b; }
-.report-kpi-card .ant-statistic-content { font-size: 22px; font-weight: 700; color: #1e293b; }
-/* Tooltip графиков */
+.report-kpi-card .ant-statistic-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.02em; color: var(--premium-muted); }
+.report-kpi-card .ant-statistic-content { font-size: 22px; font-weight: 700; color: var(--premium-text); }
+/* ——— Круговые диаграммы отчёта по продажам ——— */
+.sales-pie-card .ant-card-head {
+  padding: 16px 20px 14px;
+  min-height: 52px;
+}
+.sales-pie-card .ant-card-head-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+.sales-pie-card .ant-card-extra {
+  font-size: 12px;
+  color: var(--premium-muted);
+}
+.sales-pie-card .ant-card-body {
+  padding: 12px 20px 24px;
+}
+.sales-pie-center-label {
+  font-size: 13px;
+  font-weight: 700;
+  fill: var(--premium-text);
+  letter-spacing: -0.02em;
+}
+.sales-pie-center-sublabel {
+  font-size: 11px;
+  fill: var(--premium-muted);
+  font-weight: 500;
+}
+.recharts-pie-sector {
+  transition: filter 0.2s ease, transform 0.15s ease;
+}
+.recharts-pie-sector:hover {
+  filter: brightness(1.15);
+}
+.recharts-pie-label-line {
+  stroke: rgba(148, 163, 184, 0.5);
+  stroke-width: 1;
+}
+.recharts-pie-label-text {
+  font-size: 11px !important;
+  fill: var(--premium-muted) !important;
+  font-weight: 500;
+}
+
+/* Гарантированно светлый цвет текста подписей pie-чартов */
+.recharts-pie-label text,
+.recharts-pie-label tspan {
+  fill: var(--premium-muted) !important;
+}
+
+/* Кастомный тултип pie-чартов */
+.sales-pie-tooltip-card {
+  min-width: 220px;
+  padding: 0;
+  border-radius: 14px;
+  background: linear-gradient(165deg, rgba(15, 23, 42, 0.98) 0%, rgba(15, 23, 42, 0.95) 100%);
+  border: 1px solid var(--premium-border);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(148, 163, 184, 0.1);
+  color: var(--premium-text);
+  overflow: hidden;
+}
+.sales-pie-tooltip-title {
+  padding: 14px 16px 12px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--premium-text);
+  border-bottom: 1px solid var(--premium-border);
+  background: rgba(34, 211, 238, 0.08);
+}
+.sales-pie-tooltip-body {
+  padding: 10px 16px 14px;
+}
+.sales-pie-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 5px 0;
+  font-size: 13px;
+}
+.sales-pie-tooltip-row:not(:last-child) {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+}
+.sales-pie-tooltip-label {
+  color: var(--premium-muted);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.sales-pie-tooltip-value {
+  color: var(--premium-text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* Tooltip графиков Recharts — светлый текст на тёмном фоне */
+.recharts-default-tooltip,
+.recharts-tooltip-wrapper {
+  color: var(--premium-text) !important;
+}
+.recharts-default-tooltip .recharts-tooltip-label,
+.recharts-default-tooltip .recharts-tooltip-item,
+.recharts-default-tooltip p,
+.recharts-default-tooltip span {
+  color: var(--premium-text) !important;
+}
 .report-chart-tooltip {
   padding: 10px 14px !important;
   border-radius: 10px !important;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.12) !important;
-  border: 1px solid rgba(0,0,0,0.06) !important;
+  background: rgba(15, 23, 42, 0.95) !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3) !important;
+  border: 1px solid var(--premium-border) !important;
+  color: var(--premium-text);
+}
+
+/* Модалки в премиум-стиле (рендерятся в body) */
+.ant-modal-content {
+  background: linear-gradient(160deg, rgba(15, 23, 42, 0.98) 0%, rgba(15, 23, 42, 0.92) 100%) !important;
+  border: 1px solid var(--premium-border) !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5) !important;
+  color: var(--premium-text);
+}
+.ant-modal-header {
+  background: transparent !important;
+  border-bottom-color: var(--premium-border) !important;
+}
+.ant-modal-title {
+  color: var(--premium-text) !important;
+}
+.ant-modal-close {
+  color: var(--premium-muted) !important;
+}
+.ant-modal-close:hover {
+  color: var(--premium-text) !important;
+}
+.ant-modal-body {
+  color: var(--premium-muted);
+}
+.ant-modal-footer {
+  border-top-color: var(--premium-border) !important;
+}
+.ant-modal-footer .ant-btn-default {
+  background: rgba(15, 23, 42, 0.8) !important;
+  border-color: var(--premium-border) !important;
+  color: var(--premium-text) !important;
+}
+.ant-modal-footer .ant-btn-primary {
+  background: linear-gradient(135deg, #22d3ee 0%, #6366f1 100%) !important;
+  border: none !important;
+  color: #0f172a !important;
+}
+.ant-modal .ant-list-item {
+  border-bottom-color: var(--premium-border) !important;
+  color: var(--premium-text);
 }

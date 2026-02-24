@@ -117,6 +117,19 @@ export async function syncDeliveryFlagValues(serverUrl: string, token: string): 
   return { count: data.count ?? 0, list: Array.isArray(data.list) ? data.list : [] };
 }
 
+/** Удалить значение признака доставки из справочника. */
+export async function deleteDeliveryFlagValue(host: string, value: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/settings/delivery-flag-values`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ host, value }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error((err as { error?: string }).error ?? 'Не удалось удалить значение доставки');
+  }
+}
+
 /** Список типов оплат из БД для хоста (для фильтров). */
 export async function getPayTypes(host: string): Promise<string[]> {
   const res = await fetch(`${API_BASE}/pay-types?host=${encodeURIComponent(host)}`);

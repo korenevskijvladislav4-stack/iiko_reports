@@ -76,3 +76,10 @@ export async function syncDeliveryFlagValuesFromOlap(serverUrl: string, token: s
   }
   return values;
 }
+
+/** Удалить одно значение Delivery.IsDelivery из справочника для хоста. */
+export async function deleteDeliveryFlagValue(host: string, value: string): Promise<void> {
+  await ensureTable();
+  const key = normalizeHostKey(host);
+  await getPool().execute('DELETE FROM delivery_flag_enum WHERE host_key = ? AND value = ?', [key, value]);
+}

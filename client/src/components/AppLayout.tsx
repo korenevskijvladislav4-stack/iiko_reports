@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom';
-import { Layout, Menu, Button, Typography, Space } from 'antd';
+import { Outlet, useNavigate, useLocation, Navigate, Link } from 'react-router-dom';
+import { Layout, Menu, Button, Typography, Space, Tag } from 'antd';
 import {
   HomeOutlined,
   BarChartOutlined,
@@ -10,6 +10,7 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   LogoutOutlined,
+  LineChartOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
 
@@ -24,6 +25,14 @@ const menuItems = [
   { key: '/references', icon: <DatabaseOutlined />, label: 'Справочники' },
 ];
 
+const sectionTitles: Record<string, string> = {
+  '/': 'Панель управления',
+  '/reports/sales': 'Отчёт по продажам',
+  '/reports/dishes': 'Отчёт по блюдам',
+  '/reports/cashiers': 'Отчёт по кассирам',
+  '/references': 'Справочники',
+};
+
 export default function AppLayout() {
   const { auth, logout } = useAuth();
   const navigate = useNavigate();
@@ -34,7 +43,9 @@ export default function AppLayout() {
     return <Navigate to="/login" replace />;
   }
 
-  const siderWidth = collapsed ? 80 : 240;
+  const siderWidth = collapsed ? 80 : 248;
+  const currentTitle = sectionTitles[location.pathname] ?? 'iiko Отчёты';
+  const serverHost = auth.serverUrl.replace(/^https?:\/\//, '').split('/')[0];
 
   return (
     <Layout style={{ minHeight: '100vh' }} className="app-layout">
@@ -42,7 +53,8 @@ export default function AppLayout() {
         trigger={null}
         collapsible
         collapsed={collapsed}
-        width={240}
+        width={248}
+        className="app-layout-sider"
         style={{
           position: 'fixed',
           left: 0,
@@ -50,24 +62,38 @@ export default function AppLayout() {
           height: '100vh',
           overflow: 'auto',
           zIndex: 100,
-          background: 'linear-gradient(180deg, #1a2332 0%, #0f1419 100%)',
-          boxShadow: '2px 0 12px rgba(0,0,0,0.15)',
+          background:
+            'linear-gradient(180deg, #0f172a 0%, #0b1220 50%, #020617 100%), radial-gradient(ellipse 80% 40% at 0% 0%, rgba(34,211,238,0.06) 0, transparent 60%)',
+          boxShadow: '4px 0 32px rgba(0,0,0,0.25)',
+          borderRight: '1px solid rgba(148,163,184,0.12)',
         }}
       >
-        <div
-          style={{
-            height: 64,
-            display: 'flex',
-            alignItems: 'center',
-            paddingLeft: collapsed ? 16 : 24,
-            borderBottom: '1px solid rgba(255,255,255,0.06)',
-          }}
-        >
-          {!collapsed && (
-            <Text strong style={{ color: '#e8e8e8', fontSize: 18 }}>
-              iiko Отчёты
-            </Text>
-          )}
+        <div className="app-layout-logo">
+          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none' }}>
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                flexShrink: 0,
+                borderRadius: 12,
+                background:
+                  'linear-gradient(135deg, rgba(34,211,238,0.25) 0%, rgba(99,102,241,0.25) 100%), rgba(15,23,42,0.9)',
+                border: '1px solid rgba(34,211,238,0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#22d3ee',
+              }}
+            >
+              <LineChartOutlined style={{ fontSize: 22 }} />
+            </div>
+            {!collapsed && (
+              <span className="app-layout-logo-text">iiko Отчёты</span>
+            )}
+          </Link>
+        </div>
+        <div className="app-layout-nav-label">
+          {!collapsed && <Text style={{ color: 'var(--premium-muted)', fontSize: 11, letterSpacing: 0.5, textTransform: 'uppercase', fontWeight: 600 }}>Навигация</Text>}
         </div>
         <Menu
           theme="dark"
@@ -75,47 +101,44 @@ export default function AppLayout() {
           selectedKeys={[location.pathname]}
           items={menuItems}
           onClick={({ key }) => navigate(key)}
+          className="app-layout-menu"
           style={{
-            marginTop: 16,
+            marginTop: 8,
+            padding: '0 12px 16px',
             background: 'transparent',
             border: 'none',
           }}
         />
       </Sider>
       <Layout style={{ marginLeft: siderWidth, minHeight: '100vh' }}>
-        <Header
-          style={{
-            padding: '0 24px',
-            background: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-          }}
-        >
-          <Button
-            type="text"
-            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={() => setCollapsed(!collapsed)}
-            style={{ fontSize: 18 }}
-          />
-          <Space>
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              {auth.serverUrl.replace(/^https?:\/\//, '').split('/')[0]}
+        <Header className="app-layout-header">
+          <Space size={16} align="center">
+            <Button
+              type="text"
+              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              onClick={() => setCollapsed(!collapsed)}
+              className="app-layout-trigger"
+            />
+            <div style={{ height: 20, width: 1, background: 'rgba(148,163,184,0.3)', borderRadius: 1 }} />
+            <Text strong style={{ fontSize: 16, color: 'var(--premium-text)', letterSpacing: -0.3, fontWeight: 700 }}>
+              {currentTitle}
             </Text>
-            <Button type="text" icon={<LogoutOutlined />} onClick={logout}>
+          </Space>
+          <Space size={12} align="center">
+            <Tag className="app-layout-server-tag">
+              {serverHost}
+            </Tag>
+            <Button
+              type="text"
+              icon={<LogoutOutlined />}
+              onClick={logout}
+              className="app-layout-logout"
+            >
               Выйти
             </Button>
           </Space>
         </Header>
-        <Content
-          style={{
-            margin: 0,
-            minHeight: 280,
-            background: '#f0f2f5',
-            padding: 24,
-          }}
-        >
+        <Content className="app-layout-content">
           <Outlet />
         </Content>
       </Layout>

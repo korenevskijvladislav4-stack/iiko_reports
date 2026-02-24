@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { getFilters, setFilters, type HostFilters } from '../db/store.js';
-import { getDeliveryFlagValues, syncDeliveryFlagValuesFromOlap } from '../db/deliveryFlagStore.js';
+import { getDeliveryFlagValues, syncDeliveryFlagValuesFromOlap, deleteDeliveryFlagValue } from '../db/deliveryFlagStore.js';
 
 export const settingsRouter = Router();
 
@@ -80,5 +80,25 @@ settingsRouter.post('/delivery-flag-values/sync', async (req, res) => {
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Sync failed';
     res.status(502).json({ error: message });
+  }
+});
+
+/**
+ * DELETE /api/settings/delivery-flag-values
+ * Body: { host: string, value: string }
+ * Удаляет одно значение Delivery.IsDelivery из справочника для хоста.
+ */
+settingsRouter.delete('/delivery-flag-values', async (req, res) => {
+  try {
+    const { host, value } = req.body ?? {};
+    if (!host || !value) {
+      res.status(400).json({ error: 'host and value required' });
+      return;
+    }
+    await deleteDeliveryFlagValue(String(host), String(value));
+    res.json({ ok: true });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Failed to delete delivery flag value';
+    res.status(500).json({ error: message });
   }
 });

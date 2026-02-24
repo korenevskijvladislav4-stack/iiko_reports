@@ -13,7 +13,7 @@ import {
   Statistic,
   Space,
 } from 'antd';
-import { ReloadOutlined, DownloadOutlined, AppstoreOutlined, TrophyOutlined } from '@ant-design/icons';
+import { ReloadOutlined, DownloadOutlined, AppstoreOutlined, TrophyOutlined, FilterOutlined, CalendarOutlined, ApartmentOutlined, FolderOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
@@ -126,6 +126,7 @@ export default function DishesReportPage() {
   const [allCategories, setAllCategories] = useState<string[]>([]);
   const [allDepartments, setAllDepartments] = useState<string[]>([]);
   const [form] = Form.useForm();
+  const [quickPeriod, setQuickPeriod] = useState<string | null>(null);
   const requestIdRef = useRef(0);
 
   const runReport = async () => {
@@ -417,82 +418,50 @@ export default function DishesReportPage() {
   const topDishes = [...filteredRows].sort((a, b) => b.revenue - a.revenue).slice(0, 5);
 
   return (
-    <div style={{ maxWidth: 1400, margin: '0 auto' }}>
-      <Card
-        style={{ marginBottom: 24, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+    <div style={{ maxWidth: '100%', width: '100%', margin: 0, padding: 0 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 16,
+          marginBottom: 24,
+          padding: '20px 24px',
+          borderRadius: 'var(--radius-xl)',
+          border: '1px solid var(--premium-border)',
+          background: 'linear-gradient(145deg, rgba(15,23,42,0.6) 0%, rgba(15,23,42,0.4) 100%)',
+          boxShadow: '0 0 0 1px rgba(148,163,184,0.1), 0 12px 40px rgba(0,0,0,0.2)',
+        }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-          <div
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 10,
-              background: 'linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <AppstoreOutlined style={{ fontSize: 22, color: '#fff' }} />
-          </div>
-          <div>
-            <Typography.Title level={4} style={{ margin: 0 }}>
-              Отчёт по блюдам
-            </Typography.Title>
-            <Typography.Text type="secondary">Лучшие и худшие по продажам, выручка, себестоимость, маржа. Фильтр по группам товаров.</Typography.Text>
-          </div>
-        </div>
-
-        <Form
-          form={form}
-          layout="inline"
-          onFinish={() => runReport()}
-          style={{ flexWrap: 'wrap', gap: 8 }}
+        <div
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: 14,
+            background: 'linear-gradient(135deg, #22d3ee 0%, #6366f1 100%)',
+            boxShadow: '0 8px 24px rgba(34, 211, 238, 0.35)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
         >
-          <Form.Item name="dateFrom" label="Дата с" rules={[{ required: true }]}>
-            <DatePicker format="DD.MM.YYYY" />
-          </Form.Item>
-          <Form.Item name="dateTo" label="По" rules={[{ required: true }]}>
-            <DatePicker format="DD.MM.YYYY" />
-          </Form.Item>
-          <Form.Item name="departmentFilter" label="Точка">
-            <Select
-              mode="multiple"
-              placeholder="Все точки"
-              options={allDepartments.map((d) => ({ label: d, value: d }))}
-              style={{ minWidth: 180 }}
-              allowClear
-            />
-          </Form.Item>
-          <Form.Item name="productGroupInclude" label="Только группы">
-            <Select
-              mode="multiple"
-              placeholder="Включить группы товаров"
-              options={allCategories.map((c) => ({ label: c, value: c }))}
-              style={{ minWidth: 200 }}
-              allowClear
-            />
-          </Form.Item>
-          <Form.Item name="productGroupExclude" label="Исключить группы">
-            <Select
-              mode="multiple"
-              placeholder="Исключить группы товаров"
-              options={allCategories.map((c) => ({ label: c, value: c }))}
-              style={{ minWidth: 200 }}
-              allowClear
-            />
-          </Form.Item>
-          <Form.Item>
-            <Button type="primary" htmlType="submit" loading={loading} icon={<ReloadOutlined />}>
-              Сформировать отчёт
-            </Button>
-          </Form.Item>
-        </Form>
-      </Card>
+          <AppstoreOutlined style={{ fontSize: 24, color: '#fff' }} />
+        </div>
+        <div>
+          <Typography.Title level={4} style={{ margin: 0, color: 'var(--premium-text)', fontWeight: 700 }}>
+            Отчёт по блюдам
+          </Typography.Title>
+          <Typography.Text style={{ color: 'var(--premium-muted)', fontSize: 13 }}>
+            Выручка, себестоимость, маржа · фильтр по категориям и точкам
+          </Typography.Text>
+        </div>
+      </div>
 
       {error && (
         <Alert type="error" message={error} closable onClose={() => setError(null)} style={{ marginBottom: 16 }} />
       )}
+
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 24, flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 0', minWidth: 0 }}>
 
       {filteredRows.length > 0 && (
         <>
@@ -504,7 +473,7 @@ export default function DishesReportPage() {
                   value={totalRevenue}
                   formatter={(v) => formatCurrency(Number(v))}
                 />
-                <Typography.Text type="secondary" style={{ fontSize: 11, marginTop: 4, display: 'block' }}>
+                <Typography.Text style={{ fontSize: 11, marginTop: 4, display: 'block', color: 'var(--premium-muted)' }}>
                   Сумма по выбранным фильтрам
                 </Typography.Text>
               </Card>
@@ -516,7 +485,7 @@ export default function DishesReportPage() {
                   value={totalCost}
                   formatter={(v) => (hasAnyCost ? formatCurrency(Number(v)) : '—')}
                 />
-                <Typography.Text type="secondary" style={{ fontSize: 11, marginTop: 4, display: 'block' }}>
+                <Typography.Text style={{ fontSize: 11, marginTop: 4, display: 'block', color: 'var(--premium-muted)' }}>
                   Из учёта себестоимости в iiko
                 </Typography.Text>
               </Card>
@@ -528,7 +497,7 @@ export default function DishesReportPage() {
                   value={totalMargin}
                   formatter={(v) => (hasAnyCost ? formatCurrency(Number(v)) : '—')}
                 />
-                <Typography.Text type="secondary" style={{ fontSize: 11, marginTop: 4, display: 'block' }}>
+                <Typography.Text style={{ fontSize: 11, marginTop: 4, display: 'block', color: 'var(--premium-muted)' }}>
                   Выручка − себестоимость
                 </Typography.Text>
               </Card>
@@ -536,7 +505,7 @@ export default function DishesReportPage() {
             <Col xs={24} sm={12} md={6}>
               <Card size="small" className="report-kpi-card report-kpi-fill">
                 <Statistic title="Позиций в отчёте" value={filteredRows.length} />
-                <Typography.Text type="secondary" style={{ fontSize: 11, marginTop: 4, display: 'block' }}>
+                <Typography.Text style={{ fontSize: 11, marginTop: 4, display: 'block', color: 'var(--premium-muted)' }}>
                   Уникальных блюд (точка × категория)
                 </Typography.Text>
               </Card>
@@ -548,12 +517,12 @@ export default function DishesReportPage() {
               <Card
                 size="small"
                 className="report-dashboard-card"
-                title={<><TrophyOutlined style={{ marginRight: 6 }} /> Топ-5 блюд по выручке</>}
-                extra={<Typography.Text type="secondary" style={{ fontSize: 12 }}>Рейтинг за период</Typography.Text>}
+                title={<><TrophyOutlined style={{ marginRight: 6, color: 'var(--premium-accent)' }} /> Топ-5 блюд по выручке</>}
+                extra={<Typography.Text style={{ fontSize: 12, color: 'var(--premium-muted)' }}>Рейтинг за период</Typography.Text>}
                 style={{ height: '100%' }}
               >
                 {topDishes.length === 0 ? (
-                  <Typography.Text type="secondary">Нет данных</Typography.Text>
+                  <Typography.Text style={{ color: 'var(--premium-muted)' }}>Нет данных</Typography.Text>
                 ) : (
                   <Space direction="vertical" style={{ width: '100%' }} size="middle">
                     {topDishes.map((r, i) => {
@@ -562,14 +531,14 @@ export default function DishesReportPage() {
                       return (
                         <div key={r.key}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                            <span style={{ fontWeight: 600, fontSize: 13 }}>
+                            <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--premium-text)' }}>
                               <span style={{
                                 display: 'inline-block',
                                 width: 20,
                                 height: 20,
                                 borderRadius: 6,
-                                background: i === 0 ? '#f6e05e' : i === 1 ? '#cbd5e0' : i === 2 ? '#d69e2e' : '#e2e8f0',
-                                color: i < 3 ? '#1a202c' : '#64748b',
+                                background: i === 0 ? 'linear-gradient(135deg, #fbbf24, #f59e0b)' : i === 1 ? 'rgba(148,163,184,0.4)' : i === 2 ? 'rgba(217,119,6,0.5)' : 'rgba(71,85,105,0.5)',
+                                color: i === 0 ? '#1e293b' : 'var(--premium-text)',
                                 textAlign: 'center',
                                 lineHeight: '20px',
                                 fontSize: 11,
@@ -577,10 +546,10 @@ export default function DishesReportPage() {
                               }}>{i + 1}</span>
                               {' '}{r.dish}
                             </span>
-                            <Typography.Text strong>{formatCurrency(r.revenue)}</Typography.Text>
+                            <Typography.Text strong style={{ color: 'var(--premium-text)' }}>{formatCurrency(r.revenue)}</Typography.Text>
                           </div>
-                          <div style={{ height: 6, borderRadius: 3, background: '#f1f5f9', overflow: 'hidden' }}>
-                            <div style={{ width: `${pct}%`, height: '100%', borderRadius: 3, background: 'linear-gradient(90deg, #0ea5e9, #06b6d4)', transition: 'width 0.3s' }} />
+                          <div style={{ height: 6, borderRadius: 3, background: 'rgba(15,23,42,0.6)', overflow: 'hidden' }}>
+                            <div style={{ width: `${pct}%`, height: '100%', borderRadius: 3, background: 'linear-gradient(90deg, #22d3ee, #6366f1)', transition: 'width 0.3s' }} />
                           </div>
                         </div>
                       );
@@ -594,7 +563,7 @@ export default function DishesReportPage() {
                 size="small"
                 className="report-dashboard-card"
                 title="Выручка по категориям"
-                extra={<Typography.Text type="secondary" style={{ fontSize: 12 }}>Топ категорий</Typography.Text>}
+                extra={<Typography.Text style={{ fontSize: 12, color: 'var(--premium-muted)' }}>Топ категорий</Typography.Text>}
                 style={{ height: '100%' }}
               >
                 {(() => {
@@ -603,7 +572,7 @@ export default function DishesReportPage() {
                   const catSorted = Array.from(byCat.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5);
                   const catMax = catSorted[0]?.[1] ?? 1;
                   return catSorted.length === 0 ? (
-                    <Typography.Text type="secondary">Нет данных</Typography.Text>
+                    <Typography.Text style={{ color: 'var(--premium-muted)' }}>Нет данных</Typography.Text>
                   ) : (
                     <Space direction="vertical" style={{ width: '100%' }} size="middle">
                       {catSorted.map(([name, rev]) => {
@@ -611,11 +580,11 @@ export default function DishesReportPage() {
                         return (
                           <div key={name}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                              <span style={{ fontWeight: 600, fontSize: 13 }}>{name || '—'}</span>
-                              <Typography.Text strong>{formatCurrency(rev)}</Typography.Text>
+                              <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--premium-text)' }}>{name || '—'}</span>
+                              <Typography.Text strong style={{ color: 'var(--premium-text)' }}>{formatCurrency(rev)}</Typography.Text>
                             </div>
-                            <div style={{ height: 6, borderRadius: 3, background: '#f1f5f9', overflow: 'hidden' }}>
-                              <div style={{ width: `${pct}%`, height: '100%', borderRadius: 3, background: 'linear-gradient(90deg, #8b5cf6, #7c3aed)', transition: 'width 0.3s' }} />
+                            <div style={{ height: 6, borderRadius: 3, background: 'rgba(15,23,42,0.6)', overflow: 'hidden' }}>
+                              <div style={{ width: `${pct}%`, height: '100%', borderRadius: 3, background: 'linear-gradient(90deg, #a78bfa, #6366f1)', transition: 'width 0.3s' }} />
                             </div>
                           </div>
                         );
@@ -629,21 +598,21 @@ export default function DishesReportPage() {
 
           <Card
             title={
-              <Space wrap>
-                <span>Таблица по блюдам</span>
+              <Space wrap align="center">
+                <span style={{ color: 'var(--premium-text)', fontWeight: 600 }}>Таблица по блюдам</span>
                 {filteredRows.length > 0 && (
                   <>
-                    <Typography.Text type="secondary" style={{ fontWeight: 'normal', fontSize: 13 }}>
+                    <Typography.Text style={{ fontWeight: 'normal', fontSize: 13, color: 'var(--premium-muted)' }}>
                       {filteredRows.length} позиций
                     </Typography.Text>
-                    <Button icon={<DownloadOutlined />} onClick={exportCsv} size="small">
+                    <Button type="primary" icon={<DownloadOutlined />} onClick={exportCsv} size="small">
                       Скачать CSV
                     </Button>
                   </>
                 )}
               </Space>
             }
-            className="report-dashboard-card"
+            className="report-dashboard-card sales-table-wrap"
             style={{ borderRadius: 14 }}
           >
             <Table<DishRow>
@@ -661,11 +630,111 @@ export default function DishesReportPage() {
 
       {!loading && rows.length === 0 && auth && (
         <Card className="report-dashboard-card" style={{ borderRadius: 14 }}>
-          <Typography.Text type="secondary">
+          <Typography.Text style={{ color: 'var(--premium-muted)' }}>
             Нет данных за выбранный период или OLAP не вернул строк по блюдам. Используются поля из iiko fields.json: DishName, DishCategory, Department.
           </Typography.Text>
         </Card>
       )}
+        </div>
+
+        <div style={{ width: 336, flexShrink: 0, position: 'sticky', top: 24 }}>
+          <Card
+            title={
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--premium-text)', fontSize: 14, fontWeight: 600 }}>
+                <FilterOutlined style={{ fontSize: 18, color: 'var(--premium-accent)' }} />
+                Параметры отчёта
+              </span>
+            }
+            className="sales-filters-panel"
+            style={{ position: 'sticky', top: 24 }}
+          >
+            <Form
+              form={form}
+              layout="vertical"
+              onFinish={() => { setQuickPeriod(null); runReport(); }}
+            >
+              <div className="sales-filters-section">
+                <div className="sales-filters-section-label">
+                  <CalendarOutlined /> Период
+                </div>
+                <div className="sales-quick-periods">
+                  {[
+                    { key: '7d', label: '7 дней', from: dayjs().subtract(6, 'day'), to: dayjs() },
+                    { key: '1m', label: 'Месяц', from: dayjs().subtract(1, 'month'), to: dayjs() },
+                    { key: '3m', label: '3 месяца', from: dayjs().subtract(3, 'month'), to: dayjs() },
+                  ].map(({ key, label, from, to }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      className={`sales-quick-period-chip ${quickPeriod === key ? 'active' : ''}`}
+                      onClick={() => {
+                        form.setFieldsValue({ dateFrom: from, dateTo: to });
+                        setQuickPeriod(key);
+                        runReport();
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <Form.Item name="dateFrom" label="Дата с" rules={[{ required: true }]}>
+                  <DatePicker format="DD.MM.YYYY" style={{ width: '100%' }} />
+                </Form.Item>
+                <Form.Item name="dateTo" label="По" rules={[{ required: true }]}>
+                  <DatePicker format="DD.MM.YYYY" style={{ width: '100%' }} />
+                </Form.Item>
+              </div>
+              <div className="sales-filters-section">
+                <div className="sales-filters-section-label">
+                  <ApartmentOutlined /> Точка
+                </div>
+                <Form.Item name="departmentFilter" noStyle>
+                  <Select
+                    mode="multiple"
+                    placeholder="Все точки"
+                    options={allDepartments.map((d) => ({ label: d, value: d }))}
+                    allowClear
+                    style={{ width: '100%' }}
+                  />
+                </Form.Item>
+              </div>
+              <div className="sales-filters-section">
+                <div className="sales-filters-section-label">
+                  <FolderOutlined /> Только группы
+                </div>
+                <Form.Item name="productGroupInclude" noStyle>
+                  <Select
+                    mode="multiple"
+                    placeholder="Включить группы"
+                    options={allCategories.map((c) => ({ label: c, value: c }))}
+                    allowClear
+                    style={{ width: '100%' }}
+                  />
+                </Form.Item>
+              </div>
+              <div className="sales-filters-section">
+                <div className="sales-filters-section-label">
+                  <FilterOutlined /> Исключить группы
+                </div>
+                <Form.Item name="productGroupExclude" noStyle>
+                  <Select
+                    mode="multiple"
+                    placeholder="Исключить группы"
+                    options={allCategories.map((c) => ({ label: c, value: c }))}
+                    allowClear
+                    style={{ width: '100%' }}
+                  />
+                </Form.Item>
+              </div>
+              <Form.Item style={{ marginBottom: 0 }}>
+                <Button type="primary" htmlType="submit" loading={loading} icon={<ReloadOutlined />} block className="sales-filters-submit">
+                  Сформировать отчёт
+                </Button>
+              </Form.Item>
+            </Form>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

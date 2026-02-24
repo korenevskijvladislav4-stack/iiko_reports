@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import {
   Card,
   Table,
@@ -16,7 +16,7 @@ import {
   Modal,
   List,
 } from 'antd';
-import { BarChartOutlined, ReloadOutlined, DownloadOutlined, RiseOutlined, UnorderedListOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
+import { BarChartOutlined, ReloadOutlined, DownloadOutlined, RiseOutlined, UnorderedListOutlined, ArrowUpOutlined, ArrowDownOutlined, CalendarOutlined, ApartmentOutlined, CarOutlined, CreditCardOutlined, FilterOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import {
@@ -31,6 +31,7 @@ import {
   Legend,
   Cell,
   CartesianGrid,
+  Label,
 } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -386,14 +387,88 @@ function formatNumber(value: number, precision = 2): string {
   return Number(value).toFixed(precision);
 }
 
-function getGradientStyle(value: number, min: number, max: number): Record<string, string | number> {
-  if (value === 0 || min === max) return {};
-  let n = (value - min) / (max - min);
-  n = Math.max(0, Math.min(1, n));
-  const r = Math.round(255 * (1 - n));
-  const g = Math.round(175 * n);
-  const b = Math.round(107 * (1 - n));
-  return { backgroundColor: `rgba(${r}, ${g}, ${b}, 0.4)`, fontWeight: 600 };
+const RADIAN = Math.PI / 180;
+
+function renderDeptPieLabel(props: any) {
+  const { cx, cy, midAngle, innerRadius, outerRadius, percent, точка } = props;
+  if (!percent || percent < 0.08) return null;
+  const radius = innerRadius + (outerRadius - innerRadius) * 1.12;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  const label = (точка || '') as string;
+  if (!label) return null;
+  return (
+    <text
+      x={x}
+      y={y}
+      textAnchor={x >= cx ? 'start' : 'end'}
+      dominantBaseline="central"
+      style={{ fill: 'var(--premium-muted)', fontSize: 11, fontWeight: 500 }}
+    >
+      {`${label} ${(percent * 100).toFixed(0)}%`}
+    </text>
+  );
+}
+
+function renderPayTypePieLabel(props: any) {
+  const { cx, cy, midAngle, innerRadius, outerRadius, percent, name } = props;
+  if (!percent || percent < 0.08) return null;
+  const radius = innerRadius + (outerRadius - innerRadius) * 1.12;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  if (!name) return null;
+  return (
+    <text
+      x={x}
+      y={y}
+      textAnchor={x >= cx ? 'start' : 'end'}
+      dominantBaseline="central"
+      style={{ fill: 'var(--premium-muted)', fontSize: 11, fontWeight: 500 }}
+    >
+      {`${name} ${(percent * 100).toFixed(0)}%`}
+    </text>
+  );
+}
+
+/** Уровень в диапазоне 0..1 (0 = min, 1 = max). Для условного форматирования значками. */
+function getValueLevel(value: number, min: number, max: number): number | null {
+  if (value === 0 || min === max) return null;
+  const n = (value - min) / (max - min);
+  return Math.max(0, Math.min(1, n));
+}
+
+/** Угол поворота стрелки в градусах: 0 = вверх (max), 180 = вниз (min). */
+function getIconAngle(level: number): number {
+  return 180 - level * 180;
+}
+
+/** Рендер ячейки с значком-стрелкой по уровню в диапазоне (без заливки). */
+function renderCellWithIcon(
+  value: number,
+  record: TableRow,
+  dataKey: keyof TableRow,
+  formatter: (v: number) => ReactNode,
+): ReactNode {
+  if (record.type === 'group') return formatter(value);
+  const ranges = record.ranges as Record<string, { min: number; max: number }> | undefined;
+  const range = ranges?.[dataKey as string];
+  if (!range || value == null) return formatter(value);
+  const level = getValueLevel(Number(value), range.min, range.max);
+  if (level == null) return formatter(value);
+  const angle = getIconAngle(level);
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+      {formatter(value)}
+      <ArrowUpOutlined
+        style={{
+          fontSize: 12,
+          color: level >= 0.6 ? '#34d399' : level <= 0.4 ? '#f87171' : 'var(--premium-muted)',
+          transform: `rotate(${angle}deg)`,
+          flexShrink: 0,
+        }}
+      />
+    </span>
+  );
 }
 
 function formatDateForOlap(d: dayjs.Dayjs): string {
@@ -494,6 +569,7 @@ export default function SalesReportPage() {
   const [deliveryFlagList, setDeliveryFlagList] = useState<string[]>([]);
   const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [orderModalList, setOrderModalList] = useState<string[]>([]);
+  const [quickPeriod, setQuickPeriod] = useState<string | null>(null);
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -760,7 +836,7 @@ export default function SalesReportPage() {
     }));
   const sortedPeriodKeys = Array.from(byPeriodByPoint.keys()).sort();
   const chartPointNames = groupRows.map((r) => r.departmentKey);
-  const CHART_LINE_COLORS = ['#667eea', '#764ba2', '#e53e3e', '#38a169', '#dd6b20', '#805ad5', '#319795', '#d69e2e'];
+  const CHART_LINE_COLORS = ['#22d3ee', '#6366f1', '#34d399', '#f472b6', '#fbbf24', '#a78bfa', '#2dd4bf', '#fb923c'];
   const chartMonthDataByPoint = sortedPeriodKeys.map((periodKey) => {
     const pointMap = byPeriodByPoint.get(periodKey)!;
     const row: Record<string, string | number> = {
@@ -773,8 +849,15 @@ export default function SalesReportPage() {
   });
 
   const chartDeptData = groupRows
-    .map((r) => ({ точка: r.department.replace(/^📁\s*/, ''), выручка: r.dishSum, чеков: r.uniqOrderId, среднийЧек: r.avgCheck }))
+    .map((r) => ({
+      точка: r.department.replace(/^📁\s*/, ''),
+      выручка: r.dishSum,
+      чеков: r.uniqOrderId,
+      среднийЧек: r.avgCheck,
+      наполняемость: r.avgFill,
+    }))
     .sort((a, b) => b.выручка - a.выручка);
+  const totalDeptRevenue = chartDeptData.reduce((s, d) => s + (d.выручка ?? 0), 0);
 
   const sortedMonths = chartMonthData.map((d) => d.period);
   const prevMonthData =
@@ -821,7 +904,7 @@ export default function SalesReportPage() {
       render: (val: string, record) =>
         record.type === 'group' ? <strong style={{ fontSize: 12 }}>{val}</strong> : val,
       onCell: (record) =>
-        record.type === 'group' ? { style: { background: '#f5f5f5', fontWeight: 'bold' } } : {},
+        record.type === 'group' ? { style: { background: 'rgba(15,23,42,0.7)', fontWeight: 'bold' } } : {},
     },
     {
       title: 'Период',
@@ -832,7 +915,7 @@ export default function SalesReportPage() {
       render: (val: string, record) =>
         record.type === 'group' ? <em>{val}</em> : val,
       onCell: (record) =>
-        record.type === 'group' ? { style: { background: '#f5f5f5', fontWeight: 'bold' } } : {},
+        record.type === 'group' ? { style: { background: 'rgba(15,23,42,0.7)', fontWeight: 'bold' } } : {},
     },
     {
       title: 'Кол-во блюд',
@@ -840,14 +923,8 @@ export default function SalesReportPage() {
       key: 'dishAmount',
       width: 110,
       align: 'center',
-      render: (val: number) => formatNumber(val, 0),
-      onCell: (record) => {
-        if (record.type === 'group') return { style: { background: '#f5f5f5', fontWeight: 'bold' } };
-        if (record.type === 'month' && record.ranges && Number(record.dishAmount) > 0) {
-          return { style: getGradientStyle(record.dishAmount, record.ranges.dishAmount.min, record.ranges.dishAmount.max) };
-        }
-        return {};
-      },
+      render: (val: number, record) => renderCellWithIcon(Number(val), record, 'dishAmount', (v) => formatNumber(v, 0)),
+      onCell: (record) => (record.type === 'group' ? { style: { background: 'rgba(15,23,42,0.7)', fontWeight: 'bold' } } : {}),
     },
     {
       title: 'Чеков',
@@ -855,14 +932,8 @@ export default function SalesReportPage() {
       key: 'uniqOrderId',
       width: 90,
       align: 'center',
-      render: (val: number) => val,
-      onCell: (record) => {
-        if (record.type === 'group') return { style: { background: '#f5f5f5', fontWeight: 'bold' } };
-        if (record.type === 'month' && record.ranges && Number(record.uniqOrderId) > 0) {
-          return { style: getGradientStyle(record.uniqOrderId, record.ranges.uniqOrderId.min, record.ranges.uniqOrderId.max) };
-        }
-        return {};
-      },
+      render: (val: number, record) => renderCellWithIcon(Number(val), record, 'uniqOrderId', (v) => v),
+      onCell: (record) => (record.type === 'group' ? { style: { background: 'rgba(15,23,42,0.7)', fontWeight: 'bold' } } : {}),
     },
     {
       title: 'Выручка',
@@ -870,14 +941,8 @@ export default function SalesReportPage() {
       key: 'dishSum',
       width: 120,
       align: 'center',
-      render: (val: number) => formatCurrency(val),
-      onCell: (record) => {
-        if (record.type === 'group') return { style: { background: '#f5f5f5', fontWeight: 'bold' } };
-        if (record.type === 'month' && record.ranges && Number(record.dishSum) > 0) {
-          return { style: getGradientStyle(record.dishSum, record.ranges.dishSum.min, record.ranges.dishSum.max) };
-        }
-        return {};
-      },
+      render: (val: number, record) => renderCellWithIcon(Number(val), record, 'dishSum', formatCurrency),
+      onCell: (record) => (record.type === 'group' ? { style: { background: 'rgba(15,23,42,0.7)', fontWeight: 'bold' } } : {}),
     },
     {
       title: 'Средний чек',
@@ -885,14 +950,8 @@ export default function SalesReportPage() {
       key: 'avgCheck',
       width: 120,
       align: 'center',
-      render: (val: number) => (val > 0 ? formatCurrency(val) : '—'),
-      onCell: (record) => {
-        if (record.type === 'group') return { style: { background: '#f5f5f5', fontWeight: 'bold' } };
-        if (record.type === 'month' && record.ranges && Number(record.avgCheck) > 0) {
-          return { style: getGradientStyle(record.avgCheck, record.ranges.avgCheck.min, record.ranges.avgCheck.max) };
-        }
-        return {};
-      },
+      render: (val: number, record) => (record.type === 'group' ? (val > 0 ? formatCurrency(val) : '—') : renderCellWithIcon(Number(val), record, 'avgCheck', (v) => (v > 0 ? formatCurrency(v) : '—'))),
+      onCell: (record) => (record.type === 'group' ? { style: { background: 'rgba(15,23,42,0.7)', fontWeight: 'bold' } } : {}),
     },
     {
       title: 'Наполняемость чека',
@@ -900,14 +959,8 @@ export default function SalesReportPage() {
       key: 'avgFill',
       width: 140,
       align: 'center',
-      render: (val: number) => (val > 0 ? formatNumber(val, 2) : '—'),
-      onCell: (record) => {
-        if (record.type === 'group') return { style: { background: '#f5f5f5', fontWeight: 'bold' } };
-        if (record.type === 'month' && record.ranges && Number(record.avgFill) > 0) {
-          return { style: getGradientStyle(record.avgFill, record.ranges.avgFill.min, record.ranges.avgFill.max) };
-        }
-        return {};
-      },
+      render: (val: number, record) => (record.type === 'group' ? (val > 0 ? formatNumber(val, 2) : '—') : renderCellWithIcon(Number(val), record, 'avgFill', (v) => (v > 0 ? formatNumber(v, 2) : '—'))),
+      onCell: (record) => (record.type === 'group' ? { style: { background: 'rgba(15,23,42,0.7)', fontWeight: 'bold' } } : {}),
     },
     {
       title: 'Доля %',
@@ -919,7 +972,7 @@ export default function SalesReportPage() {
         const pct = (record.dishSum / footerDishSum) * 100;
         return `${pct.toFixed(1)}%`;
       },
-      onCell: (record) => (record.type === 'group' ? { style: { background: '#f5f5f5', fontWeight: 'bold' } } : {}),
+      onCell: (record) => (record.type === 'group' ? { style: { background: 'rgba(15,23,42,0.7)', fontWeight: 'bold' } } : {}),
     },
   ];
 
@@ -930,27 +983,41 @@ export default function SalesReportPage() {
   }
 
   return (
-    <div style={{ maxWidth: 1440, margin: '0 auto' }}>
-      {/* Заголовок и ошибка — на всю ширину */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+    <div style={{ maxWidth: '100%', width: '100%', margin: 0, padding: 0 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 16,
+          marginBottom: 24,
+          padding: '20px 24px',
+          borderRadius: 'var(--radius-xl)',
+          border: '1px solid var(--premium-border)',
+          background: 'linear-gradient(145deg, rgba(15,23,42,0.6) 0%, rgba(15,23,42,0.4) 100%)',
+          boxShadow: '0 0 0 1px rgba(148,163,184,0.1), 0 12px 40px rgba(0,0,0,0.2)',
+        }}
+      >
         <div
           style={{
-            width: 44,
-            height: 44,
-            borderRadius: 10,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            width: 48,
+            height: 48,
+            borderRadius: 14,
+            background: 'linear-gradient(135deg, #22d3ee 0%, #6366f1 100%)',
+            boxShadow: '0 8px 24px rgba(34, 211, 238, 0.35)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <BarChartOutlined style={{ fontSize: 22, color: '#fff' }} />
+          <BarChartOutlined style={{ fontSize: 24, color: '#fff' }} />
         </div>
         <div>
-          <Typography.Title level={4} style={{ margin: 0 }}>
+          <Typography.Title level={4} style={{ margin: 0, color: 'var(--premium-text)', fontWeight: 700 }}>
             Отчёт по продажам
           </Typography.Title>
-          <Typography.Text type="secondary">По точкам и периодам</Typography.Text>
+          <Typography.Text style={{ color: 'var(--premium-muted)', fontSize: 13 }}>
+            По точкам и периодам · выручка, чеки, средний чек
+          </Typography.Text>
         </div>
       </div>
 
@@ -1008,8 +1075,9 @@ export default function SalesReportPage() {
                 <div style={{
                   width: 48,
                   height: 48,
-                  borderRadius: 12,
-                  background: revenueChangePct >= 0 ? 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)' : 'linear-gradient(135deg, #fc8181 0%, #e53e3e 100%)',
+                  borderRadius: 14,
+                  background: revenueChangePct >= 0 ? 'linear-gradient(135deg, #34d399 0%, #22c55e 100%)' : 'linear-gradient(135deg, #f87171 0%, #ef4444 100%)',
+                  boxShadow: revenueChangePct >= 0 ? '0 8px 24px rgba(34, 197, 94, 0.35)' : '0 8px 24px rgba(239, 68, 68, 0.35)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1017,11 +1085,11 @@ export default function SalesReportPage() {
                   <RiseOutlined style={{ fontSize: 24, color: '#fff', transform: revenueChangePct < 0 ? 'rotate(180deg)' : undefined }} />
                 </div>
                 <div>
-                  <Typography.Text strong style={{ display: 'block', marginBottom: 2 }}>Сравнение с предыдущим периодом</Typography.Text>
-                  <Typography.Text type={revenueChangePct >= 0 ? 'success' : 'danger'} style={{ fontSize: 18, fontWeight: 700 }}>
+                  <Typography.Text strong style={{ display: 'block', marginBottom: 2, color: 'var(--premium-text)' }}>Сравнение с предыдущим периодом</Typography.Text>
+                  <Typography.Text style={{ fontSize: 18, fontWeight: 700, color: revenueChangePct >= 0 ? '#86efac' : '#fca5a5' }}>
                     {revenueChangePct >= 0 ? '+' : ''}{revenueChangePct.toFixed(1)}% выручки
                   </Typography.Text>
-                  <Typography.Text type="secondary" style={{ display: 'block', fontSize: 12 }}>
+                  <Typography.Text style={{ display: 'block', fontSize: 12, color: 'var(--premium-muted)' }}>
                     {formatCurrency(totalPrev)} → {formatCurrency(totalLast)}
                   </Typography.Text>
                 </div>
@@ -1034,13 +1102,26 @@ export default function SalesReportPage() {
               <Card size="small" className="report-dashboard-card" title="Выручка по периодам (по точкам)" extra={<Typography.Text type="secondary" style={{ fontSize: 12 }}>Динамика по каждой точке</Typography.Text>} style={{ height: '100%' }}>
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={chartMonthDataByPoint} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" vertical={false} />
                     <XAxis dataKey="period" tick={{ fontSize: 11 }} stroke="#94a3b8" />
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: unknown) => `${(Number(v) / 1000).toFixed(0)}k`} stroke="#94a3b8" />
                     <Tooltip
-                      contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.12)', padding: '12px 16px' }}
-                      formatter={(v: number, name: string) => [formatCurrency(v), name]}
-                      labelFormatter={(l: unknown) => `Период: ${l}`}
+                      content={({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) => {
+                        if (!active || !payload?.length || label == null) return null;
+                        return (
+                          <div className="sales-pie-tooltip-card">
+                            <div className="sales-pie-tooltip-title">Период: {label}</div>
+                            <div className="sales-pie-tooltip-body">
+                              {payload.map((entry: any) => (
+                                <div key={entry.dataKey ?? entry.name} className="sales-pie-tooltip-row">
+                                  <span className="sales-pie-tooltip-label">{entry.name}</span>
+                                  <span className="sales-pie-tooltip-value">{formatCurrency(Number(entry.value ?? 0))}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      }}
                     />
                     <Legend wrapperStyle={{ paddingTop: 8 }} iconType="line" iconSize={10} />
                     {chartPointNames.map((pointName, i) => (
@@ -1061,30 +1142,72 @@ export default function SalesReportPage() {
               </Card>
             </Col>
             <Col xs={24} lg={10}>
-              <Card size="small" className="report-dashboard-card" title="Выручка по точкам" extra={<Typography.Text type="secondary" style={{ fontSize: 12 }}>Доля в общей выручке</Typography.Text>} style={{ height: '100%' }}>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+              <Card size="small" className="report-dashboard-card sales-pie-card" title="Выручка по точкам" extra={<Typography.Text style={{ fontSize: 12, color: 'var(--premium-muted)' }}>Доля в выручке</Typography.Text>} style={{ height: '100%' }}>
+                <ResponsiveContainer width="100%" height={320}>
+                  <PieChart margin={{ top: 12, right: 12, bottom: 12, left: 12 }}>
                     <Pie
                       data={chartDeptData}
                       dataKey="выручка"
                       nameKey="точка"
                       cx="50%"
                       cy="50%"
-                      innerRadius={64}
-                      outerRadius={104}
-                      paddingAngle={3}
-                      label={({ точка, percent }: { точка: string; percent: number }) => `${точка} ${(percent * 100).toFixed(0)}%`}
+                      innerRadius={72}
+                      outerRadius={112}
+                      paddingAngle={4}
+                      label={renderDeptPieLabel}
+                      labelLine={{ strokeWidth: 1, stroke: 'rgba(148,163,184,0.5)' }}
                     >
+                      <Label
+                        content={({ viewBox }: { viewBox?: { cx?: number; cy?: number } }) =>
+                          viewBox?.cx != null && viewBox?.cy != null ? (
+                            <g>
+                              <text x={viewBox.cx} y={viewBox.cy - 6} textAnchor="middle" className="sales-pie-center-label">
+                                {formatCurrency(chartDeptData.reduce((s, d) => s + (d.выручка ?? 0), 0))}
+                              </text>
+                              <text x={viewBox.cx} y={viewBox.cy + 10} textAnchor="middle" className="sales-pie-center-sublabel">
+                                Всего
+                              </text>
+                            </g>
+                          ) : null
+                        }
+                        position="center"
+                      />
                       {chartDeptData.map((_, i) => (
-                        <Cell key={i} fill={['#667eea', '#764ba2', '#9f7aea', '#38b2ac', '#ed8936', '#e53e3e', '#805ad5'][i % 7]} stroke="#fff" strokeWidth={2} />
+                        <Cell key={i} fill={CHART_LINE_COLORS[i % CHART_LINE_COLORS.length]} stroke="rgba(15,23,42,0.9)" strokeWidth={2} />
                       ))}
                     </Pie>
                     <Tooltip
-                      contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.12)', padding: '12px 16px' }}
-                      formatter={(v: number, name: string, props: { payload?: { точка?: string }; percent?: number }) => {
-                        const label = (props?.payload as { точка?: string })?.точка ?? name;
-                        const pct = (props as { percent?: number })?.percent;
-                        return [formatCurrency(v), label, pct != null ? `Доля: ${(pct * 100).toFixed(1)}%` : null].filter(Boolean);
+                      content={({ active, payload }: { active?: boolean; payload?: any[] }) => {
+                        if (!active || !payload?.length) return null;
+                        const p = payload[0].payload as { точка?: string; выручка?: number; чеков?: number; среднийЧек?: number; наполняемость?: number };
+                        const pct = totalDeptRevenue > 0 && p.выручка != null ? ((p.выручка / totalDeptRevenue) * 100).toFixed(1) : '0';
+                        return (
+                          <div className="sales-pie-tooltip-card">
+                            <div className="sales-pie-tooltip-title">{p.точка ?? '—'}</div>
+                            <div className="sales-pie-tooltip-body">
+                              <div className="sales-pie-tooltip-row">
+                                <span className="sales-pie-tooltip-label">Выручка</span>
+                                <span className="sales-pie-tooltip-value">{formatCurrency(p.выручка ?? 0)}</span>
+                              </div>
+                              <div className="sales-pie-tooltip-row">
+                                <span className="sales-pie-tooltip-label">Доля от общей выручки</span>
+                                <span className="sales-pie-tooltip-value">{pct}%</span>
+                              </div>
+                              <div className="sales-pie-tooltip-row">
+                                <span className="sales-pie-tooltip-label">Чеков</span>
+                                <span className="sales-pie-tooltip-value">{p.чеков ?? '—'}</span>
+                              </div>
+                              <div className="sales-pie-tooltip-row">
+                                <span className="sales-pie-tooltip-label">Средний чек</span>
+                                <span className="sales-pie-tooltip-value">{p.среднийЧек != null && p.среднийЧек > 0 ? formatCurrency(p.среднийЧек) : '—'}</span>
+                              </div>
+                              <div className="sales-pie-tooltip-row">
+                                <span className="sales-pie-tooltip-label">Наполняемость чека</span>
+                                <span className="sales-pie-tooltip-value">{p.наполняемость != null && p.наполняемость > 0 ? formatNumber(p.наполняемость, 2) : '—'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
                       }}
                     />
                   </PieChart>
@@ -1097,21 +1220,33 @@ export default function SalesReportPage() {
               <Card size="small" className="report-dashboard-card" title="Средний чек и наполняемость по периодам" extra={<Typography.Text type="secondary" style={{ fontSize: 12 }}>Свод по всем точкам</Typography.Text>} style={{ height: '100%' }}>
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={chartMonthData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" vertical={false} />
                     <XAxis dataKey="period" tick={{ fontSize: 11 }} stroke="#94a3b8" />
                     <YAxis yAxisId="left" tick={{ fontSize: 11 }} tickCount={6} allowDecimals={false} tickFormatter={(v: unknown) => (Number(v) >= 1000 ? `${(Number(v) / 1000).toFixed(1)}k` : String(Math.round(Number(v))))} stroke="#94a3b8" />
                     <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} stroke="#94a3b8" />
                     <Tooltip
-                      contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.12)', padding: '12px 16px' }}
-                      formatter={(v: number, name: string) => {
-                        const isAvgCheck = name === 'Средний чек';
-                        return [isAvgCheck ? formatCurrency(v) : Number(v).toFixed(2), isAvgCheck ? 'Средний чек' : 'Наполняемость'];
+                      content={({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) => {
+                        if (!active || !payload?.length || label == null) return null;
+                        const formatVal = (entry: { name?: string; value?: unknown }) =>
+                          entry.name === 'Средний чек' ? formatCurrency(Number(entry.value ?? 0)) : Number(entry.value ?? 0).toFixed(2);
+                        return (
+                          <div className="sales-pie-tooltip-card">
+                            <div className="sales-pie-tooltip-title">Период: {label}</div>
+                            <div className="sales-pie-tooltip-body">
+                              {payload.map((entry: any) => (
+                                <div key={entry.dataKey ?? entry.name} className="sales-pie-tooltip-row">
+                                  <span className="sales-pie-tooltip-label">{entry.name}</span>
+                                  <span className="sales-pie-tooltip-value">{formatVal(entry)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
                       }}
-                      labelFormatter={(l: unknown) => `Период: ${l}`}
                     />
                     <Legend wrapperStyle={{ paddingTop: 8 }} iconType="line" iconSize={10} />
-                    <Line yAxisId="left" type="monotone" dataKey="среднийЧек" stroke="#667eea" name="Средний чек" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                    <Line yAxisId="right" type="monotone" dataKey="наполняемость" stroke="#38a169" name="Наполняемость (блюд/чек)" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                    <Line yAxisId="left" type="monotone" dataKey="среднийЧек" stroke="#22d3ee" name="Средний чек" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                    <Line yAxisId="right" type="monotone" dataKey="наполняемость" stroke="#34d399" name="Наполняемость (блюд/чек)" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </Card>
@@ -1119,37 +1254,68 @@ export default function SalesReportPage() {
             <Col xs={24} lg={10}>
               <Card
                 size="small"
-                className="report-dashboard-card"
+                className="report-dashboard-card sales-pie-card"
                 title="Оплаты по типам"
-                extra={<Typography.Text type="secondary" style={{ fontSize: 12 }}>Выручка за период</Typography.Text>}
+                extra={<Typography.Text style={{ fontSize: 12, color: 'var(--premium-muted)' }}>Выручка за период</Typography.Text>}
               >
                 {paymentByType.length === 0 ? (
-                  <Typography.Text type="secondary">Нет данных</Typography.Text>
+                  <Typography.Text style={{ color: 'var(--premium-muted)' }}>Нет данных</Typography.Text>
                 ) : (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
+                  <ResponsiveContainer width="100%" height={320}>
+                    <PieChart margin={{ top: 12, right: 12, bottom: 12, left: 12 }}>
                       <Pie
                         data={paymentByType}
                         dataKey="value"
                         nameKey="name"
                         cx="50%"
                         cy="50%"
-                        innerRadius={64}
-                        outerRadius={104}
-                        paddingAngle={3}
-                        label={({ name, percent }: { name: string; percent: number }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        innerRadius={72}
+                        outerRadius={112}
+                        paddingAngle={4}
+                        label={renderPayTypePieLabel}
+                        labelLine={{ strokeWidth: 1, stroke: 'rgba(148,163,184,0.5)' }}
                       >
+                        <Label
+                          content={({ viewBox }: { viewBox?: { cx?: number; cy?: number } }) => {
+                            const total = paymentByType.reduce((s, x) => s + x.value, 0);
+                            return viewBox?.cx != null && viewBox?.cy != null ? (
+                              <g>
+                                <text x={viewBox.cx} y={viewBox.cy - 6} textAnchor="middle" className="sales-pie-center-label">
+                                  {formatCurrency(total)}
+                                </text>
+                                <text x={viewBox.cx} y={viewBox.cy + 10} textAnchor="middle" className="sales-pie-center-sublabel">
+                                  Всего
+                                </text>
+                              </g>
+                            ) : null;
+                          }}
+                          position="center"
+                        />
                         {paymentByType.map((_, i) => (
-                          <Cell key={i} fill={['#667eea', '#764ba2', '#9f7aea', '#38b2ac', '#ed8936', '#e53e3e', '#805ad5'][i % 7]} stroke="#fff" strokeWidth={2} />
+                          <Cell key={i} fill={CHART_LINE_COLORS[i % CHART_LINE_COLORS.length]} stroke="rgba(15,23,42,0.9)" strokeWidth={2} />
                         ))}
                       </Pie>
-                      <Tooltip
-                        contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.12)', padding: '12px 16px' }}
-                        formatter={(v: number, name: string, props: { payload?: { name?: string; value?: number } }) => {
-                          const payload = props?.payload;
+                    <Tooltip
+                      content={({ active, payload }: { active?: boolean; payload?: any[] }) => {
+                          if (!active || !payload?.length) return null;
+                          const p = payload[0].payload as { name?: string; value?: number };
                           const total = paymentByType.reduce((s, x) => s + x.value, 0);
-                          const pct = total > 0 && payload?.value != null ? ((payload.value / total) * 100).toFixed(1) : '0';
-                          return [formatCurrency(v), `${name} (${pct}%)`];
+                          const pct = total > 0 && p.value != null ? ((p.value / total) * 100).toFixed(1) : '0';
+                          return (
+                            <div className="sales-pie-tooltip-card">
+                              <div className="sales-pie-tooltip-title">{p.name ?? '—'}</div>
+                              <div className="sales-pie-tooltip-body">
+                                <div className="sales-pie-tooltip-row">
+                                  <span className="sales-pie-tooltip-label">Выручка</span>
+                                  <span className="sales-pie-tooltip-value">{formatCurrency(p.value ?? 0)}</span>
+                                </div>
+                                <div className="sales-pie-tooltip-row">
+                                  <span className="sales-pie-tooltip-label">Доля от общей выручки</span>
+                                  <span className="sales-pie-tooltip-value">{pct}%</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
                         }}
                       />
                     </PieChart>
@@ -1163,11 +1329,11 @@ export default function SalesReportPage() {
 
       <Card
         title={
-          <Space wrap>
-            <span>Отчёт по продажам</span>
+          <Space wrap size="middle">
+            <span style={{ fontWeight: 600, color: 'var(--premium-text)' }}>Таблица продаж</span>
             {tableRows.length > 0 && (
               <>
-                <Typography.Text type="secondary" style={{ fontWeight: 'normal', fontSize: 13 }}>
+                <Typography.Text style={{ fontWeight: 'normal', fontSize: 12, color: 'var(--premium-muted)' }}>
                   {tableRows.filter((r) => r.type === 'group').length} точек
                 </Typography.Text>
                 <Select
@@ -1189,15 +1355,15 @@ export default function SalesReportPage() {
                 >
                   Порядок точек
                 </Button>
-                <Button icon={<DownloadOutlined />} onClick={exportCsv} size="small">
+                <Button type="primary" icon={<DownloadOutlined />} onClick={exportCsv} size="small">
                   Скачать CSV
                 </Button>
               </>
             )}
           </Space>
         }
-        className="report-dashboard-card"
-        style={{ borderRadius: 14 }}
+        className="report-dashboard-card sales-table-wrap"
+        style={{ borderRadius: 'var(--radius-xl)' }}
       >
         <Table<TableRow>
           size="small"
@@ -1214,7 +1380,7 @@ export default function SalesReportPage() {
                   <Table.Summary fixed>
                     <Table.Summary.Row className="report-sales-summary-row">
                       <Table.Summary.Cell index={0} align="center" colSpan={1}>
-                        <strong>📊 ОБЩИЙ ИТОГ</strong>
+                        Итог
                       </Table.Summary.Cell>
                       <Table.Summary.Cell index={1} align="center" colSpan={1} />
                       <Table.Summary.Cell index={2} align="center" colSpan={1}>
@@ -1245,73 +1411,107 @@ export default function SalesReportPage() {
         </div>
 
         {/* Правый сайдбар — фильтры */}
-        <div
-          style={{
-            width: 300,
-            flexShrink: 0,
-            position: 'sticky',
-            top: 24,
-          }}
-        >
+        <div style={{ width: 336, flexShrink: 0, position: 'sticky', top: 24 }}>
           <Card
-            title="Параметры отчёта"
-            style={{
-              borderRadius: 12,
-              boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-              border: '1px solid #f0f0f0',
-            }}
+            title={
+              <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <FilterOutlined style={{ fontSize: 18, color: 'var(--premium-accent)' }} />
+                Параметры отчёта
+              </span>
+            }
+            className="sales-filters-panel"
           >
             <Form
               form={form}
               layout="vertical"
-              onFinish={() => runReport()}
+              onFinish={() => { setQuickPeriod(null); runReport(); }}
               initialValues={{ dateFrom: dayjs().subtract(2, 'month'), dateTo: dayjs() }}
             >
-              <Form.Item name="dateFrom" label="Дата с" rules={[{ required: true }]}>
-                <DatePicker format="DD.MM.YYYY" style={{ width: '100%' }} />
-              </Form.Item>
-              <Form.Item name="dateTo" label="По" rules={[{ required: true }]}>
-                <DatePicker format="DD.MM.YYYY" style={{ width: '100%' }} />
-              </Form.Item>
-              <Form.Item label="Группировка">
-                <Select<SalesGroupBy>
-                  value={groupBy}
-                  onChange={setGroupBy}
-                  options={[
-                    { value: 'month', label: 'Месяц' },
-                    { value: 'quarter', label: 'Квартал' },
-                    { value: 'week', label: 'Неделя' },
-                    { value: 'day', label: 'День' },
-                  ]}
-                  style={{ width: '100%' }}
-                />
-              </Form.Item>
-              <Form.Item label="Доставка">
-                <Select
-                  value={deliveryFilter}
-                  onChange={(v) => setDeliveryFilter(v ?? '')}
-                  placeholder="Все"
-                  allowClear
-                  options={[
-                    { value: '', label: 'Все' },
-                    ...deliveryFlagList.map((v) => ({ value: v, label: v })),
-                  ]}
-                  style={{ width: '100%' }}
-                />
-              </Form.Item>
-              <Form.Item label="Тип оплаты">
-                <Select
-                  mode="multiple"
-                  placeholder="Все типы"
-                  value={selectedPayTypes.length > 0 ? selectedPayTypes : undefined}
-                  onChange={(v) => setSelectedPayTypes(v ?? [])}
-                  options={payTypesList.map((p) => ({ label: p, value: p }))}
-                  style={{ width: '100%' }}
-                  allowClear
-                />
-              </Form.Item>
+              <div className="sales-filters-section">
+                <div className="sales-filters-section-label">
+                  <CalendarOutlined /> Период
+                </div>
+                <div className="sales-quick-periods">
+                  {[
+                    { key: '7d', label: '7 дней', from: dayjs().subtract(6, 'day'), to: dayjs() },
+                    { key: '1m', label: 'Месяц', from: dayjs().subtract(1, 'month'), to: dayjs() },
+                    { key: '3m', label: '3 месяца', from: dayjs().subtract(3, 'month'), to: dayjs() },
+                  ].map(({ key, label, from, to }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      className={`sales-quick-period-chip ${quickPeriod === key ? 'active' : ''}`}
+                      onClick={() => {
+                        form.setFieldsValue({ dateFrom: from, dateTo: to });
+                        setQuickPeriod(key);
+                        runReport();
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <Form.Item name="dateFrom" label="Дата с" rules={[{ required: true }]}>
+                  <DatePicker format="DD.MM.YYYY" style={{ width: '100%' }} />
+                </Form.Item>
+                <Form.Item name="dateTo" label="По" rules={[{ required: true }]}>
+                  <DatePicker format="DD.MM.YYYY" style={{ width: '100%' }} />
+                </Form.Item>
+              </div>
+              <div className="sales-filters-section">
+                <div className="sales-filters-section-label">
+                  <ApartmentOutlined /> Группировка
+                </div>
+                <Form.Item noStyle>
+                  <Select<SalesGroupBy>
+                    value={groupBy}
+                    onChange={setGroupBy}
+                    options={[
+                      { value: 'month', label: 'По месяцам' },
+                      { value: 'quarter', label: 'По кварталам' },
+                      { value: 'week', label: 'По неделям' },
+                      { value: 'day', label: 'По дням' },
+                    ]}
+                    style={{ width: '100%' }}
+                  />
+                </Form.Item>
+              </div>
+              <div className="sales-filters-section">
+                <div className="sales-filters-section-label">
+                  <CarOutlined /> Доставка
+                </div>
+                <Form.Item noStyle>
+                  <Select
+                    value={deliveryFilter}
+                    onChange={(v) => setDeliveryFilter(v ?? '')}
+                    placeholder="Все"
+                    allowClear
+                    options={[
+                      { value: '', label: 'Все' },
+                      ...deliveryFlagList.map((v) => ({ value: v, label: v })),
+                    ]}
+                    style={{ width: '100%' }}
+                  />
+                </Form.Item>
+              </div>
+              <div className="sales-filters-section">
+                <div className="sales-filters-section-label">
+                  <CreditCardOutlined /> Тип оплаты
+                </div>
+                <Form.Item noStyle>
+                  <Select
+                    mode="multiple"
+                    placeholder="Все типы"
+                    value={selectedPayTypes.length > 0 ? selectedPayTypes : undefined}
+                    onChange={(v) => setSelectedPayTypes(v ?? [])}
+                    options={payTypesList.map((p) => ({ label: p, value: p }))}
+                    style={{ width: '100%' }}
+                    allowClear
+                  />
+                </Form.Item>
+              </div>
               <Form.Item style={{ marginBottom: 0 }}>
-                <Button type="primary" htmlType="submit" loading={loading} icon={<ReloadOutlined />} block size="large">
+                <Button type="primary" htmlType="submit" loading={loading} icon={<ReloadOutlined />} block className="sales-filters-submit">
                   Сформировать отчёт
                 </Button>
               </Form.Item>
