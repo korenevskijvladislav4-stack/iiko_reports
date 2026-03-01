@@ -1,34 +1,42 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { Card, Form, Input, Button, Alert, Typography, Divider, Space } from 'antd';
-import { UserOutlined, LockOutlined, CloudServerOutlined, LineChartOutlined } from '@ant-design/icons';
-import { getToken } from '../api/client';
+import { UserOutlined, LockOutlined, LineChartOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
-import { useState } from 'react';
+import { useLoginMutation } from '../api/rtkApi';
 
 const { Title, Text, Paragraph } = Typography;
 
 export default function LoginPage() {
   const { auth, setAuth } = useAuth();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const [login, { isLoading }] = useLoginMutation();
   const [error, setError] = useState<string | null>(null);
   const [form] = Form.useForm();
 
   useEffect(() => {
-    if (auth) navigate('/', { replace: true });
+    if (auth) navigate(auth.user.role === 'staff' ? '/hr/employees' : '/', { replace: true });
   }, [auth, navigate]);
 
-  const onFinish = async (values: { serverUrl: string; login: string; password: string }) => {
+  const onFinish = async (values: { email: string; password: string }) => {
     setError(null);
-    setLoading(true);
     try {
-      const { token } = await getToken(values);
-      setAuth({ serverUrl: values.serverUrl, token });
+      const result = await login({ email: values.email, password: values.password }).unwrap();
+      setAuth({
+        token: result.token,
+        user: {
+          id: result.user.id,
+          email: result.user.email,
+          name: result.user.name,
+          role: result.user.role,
+          companyId: result.company.id,
+          companyName: result.company.name,
+          scheduleAccessRole: result.user.scheduleAccessRole ?? undefined,
+          includeInSchedule: result.user.includeInSchedule ?? undefined,
+        },
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка входа');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -237,7 +245,7 @@ export default function LoginPage() {
                 Вход в панель
               </Title>
               <Text style={{ color: '#9ca3af', fontSize: 13 }}>
-                Подключите свой iiko сервер. Мы используем только официальный API и не храним ваши пароли.
+                Войдите по email и паролю. Подключение к iiko настраивается администратором компании в панели.
               </Text>
             </div>
 
@@ -249,23 +257,16 @@ export default function LoginPage() {
               requiredMark={false}
             >
               <Form.Item
-                name="serverUrl"
-                label={<Text style={{ color: '#e5e7eb' }}>Адрес сервера</Text>}
-                rules={[{ required: true, message: 'Укажите адрес сервера' }]}
-              >
-                <Input
-                  prefix={<CloudServerOutlined style={{ color: '#9ca3af' }} />}
-                  placeholder="https://xxx-co.iiko.it"
-                />
-              </Form.Item>
-              <Form.Item
-                name="login"
-                label={<Text style={{ color: '#e5e7eb' }}>Логин</Text>}
-                rules={[{ required: true, message: 'Введите логин' }]}
+                name="email"
+                label={<Text style={{ color: '#e5e7eb' }}>Email</Text>}
+                rules={[
+                  { required: true, message: 'Введите email' },
+                  { type: 'email', message: 'Некорректный email' },
+                ]}
               >
                 <Input
                   prefix={<UserOutlined style={{ color: '#9ca3af' }} />}
-                  placeholder="Администратор"
+                  placeholder="you@company.com"
                 />
               </Form.Item>
               <Form.Item
@@ -290,7 +291,7 @@ export default function LoginPage() {
                 <Button
                   type="primary"
                   htmlType="submit"
-                  loading={loading}
+                  loading={isLoading}
                   block
                   size="large"
                   style={{
@@ -304,6 +305,14 @@ export default function LoginPage() {
                   Войти в отчёты
                 </Button>
               </Form.Item>
+              <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                <Text style={{ color: '#9ca3af', fontSize: 13 }}>
+                  Нет аккаунта?{' '}
+                  <Link to="/register" style={{ color: '#22d3ee', fontWeight: 600 }}>
+                    Зарегистрироваться
+                  </Link>
+                </Text>
+              </div>
               <Text style={{ fontSize: 11, color: '#64748b' }}>
                 Требуется доступ к модулю OLAP в вашем iiko. При первом входе загрузка справочников может занять
                 пару минут.

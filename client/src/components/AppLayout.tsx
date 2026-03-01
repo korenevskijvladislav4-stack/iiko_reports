@@ -7,30 +7,47 @@ import {
   AppstoreOutlined,
   UserOutlined,
   DatabaseOutlined,
+  TeamOutlined,
+  ApartmentOutlined,
+  CalendarOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   LogoutOutlined,
   LineChartOutlined,
+  CalculatorOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
 
-const menuItems = [
+const allMenuItems = [
   { key: '/', icon: <HomeOutlined />, label: 'Главная' },
   { key: '/reports/sales', icon: <BarChartOutlined />, label: 'Отчёт по продажам' },
   { key: '/reports/dishes', icon: <AppstoreOutlined />, label: 'Отчёт по блюдам' },
   { key: '/reports/cashiers', icon: <UserOutlined />, label: 'Отчёт по кассирам' },
+  { key: '/reports/product-cost', icon: <CalculatorOutlined />, label: 'Стоимость товара' },
   { key: '/references', icon: <DatabaseOutlined />, label: 'Справочники' },
+  { key: '/hr/departments', icon: <ApartmentOutlined />, label: 'Подразделения и должности' },
+  { key: '/hr/employees', icon: <TeamOutlined />, label: 'Сотрудники' },
+  { key: '/hr/schedule', icon: <CalendarOutlined />, label: 'График смен' },
 ];
+
+/** Пути для обычных сотрудников (staff, не менеджеры) */
+const STAFF_PATHS = ['/hr/employees', '/hr/schedule'];
+/** Дополнительные пути для менеджеров (staff + scheduleAccessRole manager) */
+const MANAGER_EXTRA_PATHS = ['/hr/departments'];
 
 const sectionTitles: Record<string, string> = {
   '/': 'Панель управления',
   '/reports/sales': 'Отчёт по продажам',
   '/reports/dishes': 'Отчёт по блюдам',
   '/reports/cashiers': 'Отчёт по кассирам',
+  '/reports/product-cost': 'Формирование стоимости товара',
   '/references': 'Справочники',
+  '/hr/departments': 'Подразделения и должности',
+  '/hr/employees': 'Сотрудники',
+  '/hr/schedule': 'График смен',
 };
 
 export default function AppLayout() {
@@ -43,9 +60,17 @@ export default function AppLayout() {
     return <Navigate to="/login" replace />;
   }
 
+  const isStaff = auth.user.role === 'staff';
+  const isManager = isStaff && auth.user.scheduleAccessRole === 'manager';
+  const isOwner = auth.user.role === 'owner';
+  const menuItems = isStaff
+    ? allMenuItems.filter((item) => STAFF_PATHS.includes(item.key) || (isManager && MANAGER_EXTRA_PATHS.includes(item.key)))
+    : allMenuItems.filter((item) => item.key !== '/references' || isOwner);
+  const staffDefaultPath = '/hr/employees';
+
   const siderWidth = collapsed ? 80 : 248;
   const currentTitle = sectionTitles[location.pathname] ?? 'iiko Отчёты';
-  const serverHost = auth.serverUrl.replace(/^https?:\/\//, '').split('/')[0];
+  const companyLabel = auth.user.companyName ?? `Компания ${auth.user.companyId.slice(0, 6)}`;
 
   return (
     <Layout style={{ minHeight: '100vh' }} className="app-layout">
@@ -69,7 +94,7 @@ export default function AppLayout() {
         }}
       >
         <div className="app-layout-logo">
-          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none' }}>
+          <Link to={isStaff ? staffDefaultPath : '/'} style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none' }}>
             <div
               style={{
                 width: 40,
@@ -98,6 +123,7 @@ export default function AppLayout() {
         <Menu
           theme="dark"
           mode="inline"
+          inlineCollapsed={collapsed}
           selectedKeys={[location.pathname]}
           items={menuItems}
           onClick={({ key }) => navigate(key)}
@@ -126,7 +152,7 @@ export default function AppLayout() {
           </Space>
           <Space size={12} align="center">
             <Tag className="app-layout-server-tag">
-              {serverHost}
+              {companyLabel}
             </Tag>
             <Button
               type="text"

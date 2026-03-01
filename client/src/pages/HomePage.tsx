@@ -9,11 +9,12 @@ import {
   SyncOutlined,
   SafetyCertificateOutlined,
   ThunderboltOutlined,
+  CalculatorOutlined,
 } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { useAuth } from '../context/AuthContext';
-import { fetchOlapReport } from '../api/client';
+import { useFetchOlapReportMutation } from '../api/rtkApi';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -281,6 +282,7 @@ function extractTodaySummary(data: unknown): TodaySummary {
 
 export default function HomePage() {
   const { auth } = useAuth();
+  const [fetchOlap] = useFetchOlapReportMutation();
   const [todaySummary, setTodaySummary] = useState<TodaySummary>(null);
   const [todayLoading, setTodayLoading] = useState(true);
   const [todayError, setTodayError] = useState<string | null>(null);
@@ -293,15 +295,14 @@ export default function HomePage() {
     const today = dayjs().format('DD.MM.YYYY');
     setTodayLoading(true);
     setTodayError(null);
-    fetchOlapReport({
-      serverUrl: auth.serverUrl,
-      token: auth.token,
+    fetchOlap({
       report: 'SALES',
       from: today,
       to: today,
       groupByRowFields: ['OpenDate.Typed'],
       aggregateFields: ['DishSumInt', 'GuestNum', 'DishAmountInt', 'UniqOrderId', 'DishDiscountSumInt.average', 'DishAmountInt.PerOrder'],
     })
+      .unwrap()
       .then((result) => {
         if (result.raw) {
           setTodayError('Ответ сервера не в формате JSON');
@@ -312,7 +313,7 @@ export default function HomePage() {
         setTodaySummary(summary);
       })
       .catch((e) => {
-        setTodayError(e instanceof Error ? e.message : 'Ошибка загрузки');
+        setTodayError(e instanceof Error ? (e as any).data?.message ?? 'Ошибка загрузки' : 'Ошибка загрузки');
         setTodaySummary(null);
       })
       .finally(() => setTodayLoading(false));
@@ -734,6 +735,64 @@ export default function HomePage() {
             </Card>
           </Link>
         </Col>
+        <Col xs={24} md={8} className="saas-fade-in saas-fade-in-delay-6">
+          <Link to="/reports/product-cost" style={{ textDecoration: 'none' }}>
+            <Card
+              hoverable
+              className="report-dashboard-card"
+              style={{
+                borderRadius: 'var(--radius-xl)',
+                overflow: 'hidden',
+                height: '100%',
+              }}
+              styles={{ body: { padding: 20, height: '100%', display: 'flex' } }}
+            >
+              <Space align="start" size={18} style={{ width: '100%' }}>
+                <div
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 16,
+                    background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#fff',
+                    boxShadow: '0 8px 24px rgba(34, 197, 94, 0.35)',
+                  }}
+                >
+                  <CalculatorOutlined style={{ fontSize: 24 }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                  <Title level={5} style={{ marginBottom: 4, color: 'var(--premium-text)' }}>
+                    Стоимость товара
+                  </Title>
+                  <Paragraph
+                    style={{
+                      marginBottom: 8,
+                      color: 'var(--premium-muted)',
+                      fontSize: 13,
+                      flexGrow: 1,
+                    }}
+                  >
+                    Себестоимость из iiko, зарплата цеха по графикам, человеческая стоимость на единицу.
+                  </Paragraph>
+                  <Tag
+                    style={{
+                      borderRadius: 999,
+                      fontSize: 11,
+                      background: 'rgba(34, 197, 94, 0.2)',
+                      borderColor: 'rgba(34, 197, 94, 0.5)',
+                      color: '#86efac',
+                    }}
+                  >
+                    Для расчёта себестоимости
+                  </Tag>
+                </div>
+              </Space>
+            </Card>
+          </Link>
+        </Col>
       </Row>
 
       <div
@@ -883,6 +942,7 @@ export default function HomePage() {
               </div>
             </Link>
           </Col>
+          {auth?.user?.role === 'owner' && (
           <Col xs={24} sm={12} md={6} style={{ marginBottom: 16 }}>
             <Link to="/references" style={{ textDecoration: 'none' }}>
               <div
@@ -911,6 +971,7 @@ export default function HomePage() {
               </div>
             </Link>
           </Col>
+          )}
         </Row>
       </div>
     </div>

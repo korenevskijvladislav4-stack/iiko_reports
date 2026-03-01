@@ -1,0 +1,182 @@
+// Prisma schema — мультитенантность по компаниям, авторизация, HR, креды iiko
+// https://www.prisma.io/docs
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  name      String   @db.VarChar(255)
+  createdAt DateTime @default(now())
+
+  users               User[]
+  departments         Department[]
+  positions           Position[]
+  userSchedules       UserSchedule[]
+  payTypes            CompanyPayType[]
+  deliveryFlags       CompanyDeliveryFlag[]
+  productGroups       CompanyProductGroup[]
+  points              CompanyPoint[]
+  pointDepartmentLinks CompanyPointDepartment[]
+  iikoCredentials     CompanyIikoCredentials?
+}
+
+model User {
+  id                 String   @id @default(uuid()) @db.VarChar(36)
+  companyId          String   @map("company_id") @db.VarChar(36)
+  email              String   @unique @db.VarChar(255)
+  passwordHash       String   @map("password_hash") @db.VarChar(255)
+  name               String   @db.VarChar(255)
+  role               String   @default("staff") @db.VarChar(50) // owner | admin | staff
+  scheduleAccessRole String   @default("none") @map("schedule_access_role") @db.VarChar(50) // none | manager | worker
+  includeInSchedule Boolean  @default(false) @map("include_in_schedule")
+  departmentId      String?   @map("department_id") @db.VarChar(36)
+  positionId        String?   @map("position_id") @db.VarChar(36)
+  hourlyRate        Float?   @map("hourly_rate")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  company    Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  department Department?      @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  position   Position?        @relation(fields: [positionId], references: [id], onDelete: SetNull)
+  reportFilters UserReportFilter[]
+  schedules  UserSchedule[]
+}
+
+model CompanyIikoCredentials {
+  id           String   @id @default(uuid()) @db.VarChar(36)
+  companyId    String   @unique @map("company_id") @db.VarChar(36)
+  serverUrl    String   @map("server_url") @db.VarChar(191)
+  login        String   @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(40) // SHA1 hex
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("company_iiko_credentials")
+}
+
+model UserReportFilter {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  userId    String   @map("user_id") @db.VarChar(36)
+  hostKey   String   @map("host_key") @db.VarChar(191)
+  filters   Json     @db.Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, hostKey])
+  @@map("user_report_filters")
+}
+
+model Department {
+  id                 String   @id @default(uuid()) @db.VarChar(36)
+  companyId          String   @map("company_id") @db.VarChar(36)
+  name               String   @db.VarChar(255)
+  priority           Int      @default(0)
+  productGroupValues Json?    @map("product_group_values") @db.Json
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  company             Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  users               User[]
+  pointDepartmentLinks CompanyPointDepartment[]
+}
+
+model CompanyProductGroup {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  companyId String   @map("company_id") @db.VarChar(36)
+  hostKey   String   @map("host_key") @db.VarChar(191)
+  value     String   @db.VarChar(255)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, hostKey, value])
+  @@map("company_product_groups")
+}
+
+model CompanyPoint {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  companyId String   @map("company_id") @db.VarChar(36)
+  hostKey   String   @map("host_key") @db.VarChar(191)
+  pointName String   @map("point_name") @db.VarChar(255)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, hostKey, pointName])
+  @@map("company_points")
+}
+
+model CompanyPointDepartment {
+  id           String   @id @default(uuid()) @db.VarChar(36)
+  companyId    String   @map("company_id") @db.VarChar(36)
+  hostKey      String   @map("host_key") @db.VarChar(191)
+  pointName    String   @map("point_name") @db.VarChar(255)
+  departmentId String   @map("department_id") @db.VarChar(36)
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  company    Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, hostKey, pointName])
+  @@map("company_point_department")
+}
+
+model Position {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  companyId String   @map("company_id") @db.VarChar(36)
+  name      String   @db.VarChar(255)
+  priority  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  users   User[]
+}
+
+model UserSchedule {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  companyId String   @map("company_id") @db.VarChar(36)
+  userId    String   @map("user_id") @db.VarChar(36)
+  date      DateTime @db.Date
+  startTime String?  @map("start_time") @db.VarChar(20)
+  endTime   String?  @map("end_time") @db.VarChar(20)
+  notes     String?  @db.VarChar(500)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_schedules")
+}
+
+model CompanyPayType {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  companyId String   @map("company_id") @db.VarChar(36)
+  hostKey   String   @map("host_key") @db.VarChar(191)
+  payType   String   @map("pay_type") @db.VarChar(191)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, hostKey, payType])
+  @@map("company_pay_types")
+}
+
+model CompanyDeliveryFlag {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  companyId String   @map("company_id") @db.VarChar(36)
+  hostKey   String   @map("host_key") @db.VarChar(191)
+  value     String   @db.VarChar(191)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, hostKey, value])
+  @@map("company_delivery_flag_enum")
+}

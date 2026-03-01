@@ -132,9 +132,7 @@ export default function CashiersReportPage() {
       const from = formatDateForOlap(dateFrom);
       const to = formatDateForOlap(dateTo);
 
-      const result = await fetchOlapReport({
-        serverUrl: auth.serverUrl,
-        token: auth.token,
+      const result = await fetchOlapReport(auth.token, {
         report: 'SALES',
         from,
         to,

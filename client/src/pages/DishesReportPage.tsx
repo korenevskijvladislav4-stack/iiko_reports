@@ -19,6 +19,7 @@ import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { fetchOlapReport, isTokenExpiredError } from '../api/client';
+import { useGetProductGroupValuesQuery } from '../api/rtkApi';
 
 type OlapRow = Record<string, string | number>;
 
@@ -139,9 +140,7 @@ export default function DishesReportPage() {
       const from = formatDateForOlap(dateFrom);
       const to = formatDateForOlap(dateTo);
 
-      const result = await fetchOlapReport({
-        serverUrl: auth.serverUrl,
-        token: auth.token,
+      const result = await fetchOlapReport(auth.token, {
         report: 'SALES',
         from,
         to,
@@ -265,9 +264,11 @@ export default function DishesReportPage() {
     }
   }, [auth]);
 
+  const { data: productGroupOptions = [] } = useGetProductGroupValuesQuery(undefined, { skip: !auth });
   const includeGroups = Form.useWatch('productGroupInclude', form) ?? [];
   const excludeGroups = Form.useWatch('productGroupExclude', form) ?? [];
   const selectedDepts = Form.useWatch('departmentFilter', form) ?? [];
+  const productGroupFilterOptions = productGroupOptions.length > 0 ? productGroupOptions : allCategories;
 
   const filteredRows = rows.filter((r) => {
     if (Array.isArray(includeGroups) && includeGroups.length > 0 && !includeGroups.includes(r.category)) return false;
@@ -706,7 +707,7 @@ export default function DishesReportPage() {
                   <Select
                     mode="multiple"
                     placeholder="Включить группы"
-                    options={allCategories.map((c) => ({ label: c, value: c }))}
+                    options={productGroupFilterOptions.map((c) => ({ label: c, value: c }))}
                     allowClear
                     style={{ width: '100%' }}
                   />
@@ -720,7 +721,7 @@ export default function DishesReportPage() {
                   <Select
                     mode="multiple"
                     placeholder="Исключить группы"
-                    options={allCategories.map((c) => ({ label: c, value: c }))}
+                    options={productGroupFilterOptions.map((c) => ({ label: c, value: c }))}
                     allowClear
                     style={{ width: '100%' }}
                   />

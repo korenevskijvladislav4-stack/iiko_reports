@@ -1,74 +1,89 @@
 import { useState, useEffect } from 'react';
-import { Card, Button, List, Typography, message, Popconfirm, Space, Table, Modal } from 'antd';
+import { Card, Button, List, Typography, message, Popconfirm, Space, Table, Modal, Form, Input } from 'antd';
 import { DatabaseOutlined, SyncOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useAuth } from '../context/AuthContext';
-import { getPayTypes, syncPayTypes, deletePayType, getDeliveryFlagValues, syncDeliveryFlagValues, deleteDeliveryFlagValue } from '../api/client';
-
-function getHostKey(serverUrl: string): string {
-  return serverUrl.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '') || serverUrl;
-}
+import {
+  useGetPayTypesQuery,
+  useSyncPayTypesMutation,
+  useDeletePayTypeMutation,
+  useGetDeliveryFlagValuesQuery,
+  useSyncDeliveryFlagValuesMutation,
+  useDeleteDeliveryFlagValueMutation,
+  useGetProductGroupValuesQuery,
+  useSyncProductGroupValuesMutation,
+  useDeleteProductGroupValueMutation,
+  useGetPointsQuery,
+  useSyncPointsMutation,
+  useDeletePointMutation,
+  useGetIikoCredentialsQuery,
+  useSaveIikoCredentialsMutation,
+} from '../api/rtkApi';
 
 export default function ReferencesPage() {
   const { auth } = useAuth();
-  const [payTypesList, setPayTypesList] = useState<string[]>([]);
-  const [, setLoading] = useState(false);
-  const [syncLoading, setSyncLoading] = useState(false);
-  const [deleting, setDeleting] = useState<string | null>(null);
-  const [deliveryFlagList, setDeliveryFlagList] = useState<string[]>([]);
-  const [, setDeliveryFlagLoading] = useState(false);
-  const [deliveryFlagSyncLoading, setDeliveryFlagSyncLoading] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [detailsType, setDetailsType] = useState<'payTypes' | 'delivery' | null>(null);
-  const [deletingDelivery, setDeletingDelivery] = useState<string | null>(null);
+  const canManageRefs = auth?.user?.role === 'owner' || auth?.user?.role === 'admin';
+  const { data: payTypesData } = useGetPayTypesQuery(undefined, { skip: !auth });
+  const [syncPayTypes, { isLoading: syncLoading }] = useSyncPayTypesMutation();
+  const [deletePayTypeMutation] = useDeletePayTypeMutation();
+  const { data: deliveryData } = useGetDeliveryFlagValuesQuery(undefined, { skip: !auth });
+  const [syncDeliveryFlags, { isLoading: deliveryFlagSyncLoading }] = useSyncDeliveryFlagValuesMutation();
+  const [deleteDeliveryFlagMutation] = useDeleteDeliveryFlagValueMutation();
+  const { data: productGroupsData } = useGetProductGroupValuesQuery(undefined, { skip: !auth });
+  const [syncProductGroups, { isLoading: productGroupsSyncLoading }] = useSyncProductGroupValuesMutation();
+  const [deleteProductGroupMutation] = useDeleteProductGroupValueMutation();
+  const { data: iikoPointsData = [] } = useGetPointsQuery(undefined, { skip: !auth });
+  const [syncPoints, { isLoading: syncPointsLoading }] = useSyncPointsMutation();
+  const [deletePointMutation] = useDeletePointMutation();
+  const { data: iikoCreds, isLoading: iikoLoading } = useGetIikoCredentialsQuery(undefined, { skip: !auth });
+  const [saveIikoCreds, { isLoading: iikoSaving }] = useSaveIikoCredentialsMutation();
 
-  const host = auth ? getHostKey(auth.serverUrl) : '';
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsType, setDetailsType] = useState<'payTypes' | 'delivery' | 'productGroups' | 'iikoPoints' | null>(null);
+  const [deletingDelivery, setDeletingDelivery] = useState<string | null>(null);
+  const [deletingProductGroup, setDeletingProductGroup] = useState<string | null>(null);
+  const [deletingPoint, setDeletingPoint] = useState<string | null>(null);
+  const [iikoForm] = Form.useForm();
 
   type ReferenceRow = {
-    key: 'payTypes' | 'delivery';
+    key: 'payTypes' | 'delivery' | 'productGroups' | 'iikoPoints';
     name: string;
     description: string;
     count: number;
   };
 
-  useEffect(() => {
-    if (!host) return;
-    setLoading(true);
-    getPayTypes(host)
-      .then(setPayTypesList)
-      .catch(() => setPayTypesList([]))
-      .finally(() => setLoading(false));
-  }, [host]);
+  const iikoPointsList = Array.isArray(iikoPointsData) ? iikoPointsData : [];
 
   useEffect(() => {
-    if (!host) return;
-    setDeliveryFlagLoading(true);
-    getDeliveryFlagValues(host)
-      .then(setDeliveryFlagList)
-      .catch(() => setDeliveryFlagList([]))
-      .finally(() => setDeliveryFlagLoading(false));
-  }, [host]);
+    if (iikoCreds) {
+      iikoForm.setFieldsValue({
+        serverUrl: iikoCreds.serverUrl,
+        login: iikoCreds.login,
+        password: '',
+      });
+    }
+  }, [auth, iikoForm]);
+
+  const payTypesList = Array.isArray(payTypesData) ? (payTypesData as string[]) : [];
+  const deliveryFlagList = Array.isArray(deliveryData) ? (deliveryData as string[]) : [];
+  const productGroupsList = Array.isArray(productGroupsData) ? (productGroupsData as string[]) : [];
 
   const handleSyncPayTypes = async () => {
     if (!auth) return;
-    setSyncLoading(true);
     try {
-      const { count } = await syncPayTypes(auth.serverUrl, auth.token);
-      await getPayTypes(host).then(setPayTypesList);
+      const { count } = await syncPayTypes().unwrap();
       message.success(`Справочник обновлён: ${count} типов оплат`);
     } catch (e) {
       message.error(e instanceof Error ? e.message : 'Ошибка синхронизации');
-    } finally {
-      setSyncLoading(false);
     }
   };
 
   const handleDeletePayType = async (payType: string) => {
-    if (!host) return;
+    if (!auth) return;
     setDeleting(payType);
     try {
-      await deletePayType(host, payType);
-      setPayTypesList((prev) => prev.filter((p) => p !== payType));
+      await deletePayTypeMutation(payType).unwrap();
       message.success('Значение удалено');
     } catch (e) {
       message.error(e instanceof Error ? e.message : 'Ошибка удаления');
@@ -79,29 +94,70 @@ export default function ReferencesPage() {
 
   const handleSyncDeliveryFlag = async () => {
     if (!auth) return;
-    setDeliveryFlagSyncLoading(true);
     try {
-      const { count } = await syncDeliveryFlagValues(auth.serverUrl, auth.token);
-      await getDeliveryFlagValues(host).then(setDeliveryFlagList);
+      const { count } = await syncDeliveryFlags().unwrap();
       message.success(`Справочник обновлён: ${count} значений «Доставка»`);
     } catch (e) {
       message.error(e instanceof Error ? e.message : 'Ошибка синхронизации');
-    } finally {
-      setDeliveryFlagSyncLoading(false);
     }
   };
 
   const handleDeleteDeliveryValue = async (value: string) => {
-    if (!host) return;
+    if (!auth) return;
     setDeletingDelivery(value);
     try {
-      await deleteDeliveryFlagValue(host, value);
-      setDeliveryFlagList((prev) => prev.filter((v) => v !== value));
+      await deleteDeliveryFlagMutation(value).unwrap();
       message.success('Значение удалено');
     } catch (e) {
       message.error(e instanceof Error ? e.message : 'Ошибка удаления');
     } finally {
       setDeletingDelivery(null);
+    }
+  };
+
+  const handleSyncProductGroups = async () => {
+    if (!auth) return;
+    try {
+      const { count } = await syncProductGroups().unwrap();
+      message.success(`Справочник обновлён: ${count} групп продукции`);
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Ошибка синхронизации');
+    }
+  };
+
+  const handleDeleteProductGroupValue = async (value: string) => {
+    if (!auth) return;
+    setDeletingProductGroup(value);
+    try {
+      await deleteProductGroupMutation(value).unwrap();
+      message.success('Значение удалено');
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Ошибка удаления');
+    } finally {
+      setDeletingProductGroup(null);
+    }
+  };
+
+  const handleSyncIikoPoints = async () => {
+    if (!auth) return;
+    try {
+      const { count } = await syncPoints().unwrap();
+      message.success(`Справочник обновлён: ${count} точек`);
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Ошибка синхронизации');
+    }
+  };
+
+  const handleDeletePoint = async (pointName: string) => {
+    if (!auth) return;
+    setDeletingPoint(pointName);
+    try {
+      await deletePointMutation(pointName).unwrap();
+      message.success('Точка удалена из справочника');
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Ошибка удаления');
+    } finally {
+      setDeletingPoint(null);
     }
   };
 
@@ -117,6 +173,18 @@ export default function ReferencesPage() {
       name: 'Доставка',
       description: 'Значения признака доставки для фильтра в отчёте по продажам.',
       count: deliveryFlagList.length,
+    },
+    {
+      key: 'productGroups',
+      name: 'Группы продукции',
+      description: 'Группы блюд из iiko для фильтра «Только группы» в отчёте по блюдам.',
+      count: productGroupsList.length,
+    },
+    {
+      key: 'iikoPoints',
+      name: 'Точки',
+      description: 'Торговые предприятия (Department) из iiko. Привязку к подразделениям настраивайте в форме создания/редактирования подразделения.',
+      count: iikoPointsList.length,
     },
   ];
 
@@ -161,25 +229,44 @@ export default function ReferencesPage() {
           >
             Просмотр
           </Button>
-          {record.key === 'payTypes' ? (
-            <Button
-              size="small"
-              icon={<SyncOutlined />}
-              onClick={handleSyncPayTypes}
-              loading={syncLoading}
-            >
-              Обновить
-            </Button>
-          ) : (
-            <Button
-              size="small"
-              icon={<SyncOutlined />}
-              onClick={handleSyncDeliveryFlag}
-              loading={deliveryFlagSyncLoading}
-            >
-              Обновить
-            </Button>
-          )}
+          {canManageRefs &&
+            (record.key === 'payTypes' ? (
+              <Button
+                size="small"
+                icon={<SyncOutlined />}
+                onClick={handleSyncPayTypes}
+                loading={syncLoading}
+              >
+                Обновить
+              </Button>
+            ) : record.key === 'delivery' ? (
+              <Button
+                size="small"
+                icon={<SyncOutlined />}
+                onClick={handleSyncDeliveryFlag}
+                loading={deliveryFlagSyncLoading}
+              >
+                Обновить
+              </Button>
+            ) : record.key === 'productGroups' ? (
+              <Button
+                size="small"
+                icon={<SyncOutlined />}
+                onClick={handleSyncProductGroups}
+                loading={productGroupsSyncLoading}
+              >
+                Обновить
+              </Button>
+            ) : record.key === 'iikoPoints' ? (
+              <Button
+                size="small"
+                icon={<SyncOutlined />}
+                onClick={handleSyncIikoPoints}
+                loading={syncPointsLoading}
+              >
+                Обновить
+              </Button>
+            ) : null)}
         </Space>
       ),
     },
@@ -187,6 +274,69 @@ export default function ReferencesPage() {
 
   return (
     <div style={{ maxWidth: '100%', width: '100%', margin: 0, padding: '0 0 24px' }}>
+      <Card
+        style={{ marginBottom: 24 }}
+        title="Подключение к iiko (для всей компании)"
+      >
+        <Typography.Paragraph style={{ color: 'var(--premium-muted)', marginBottom: 16 }}>
+          Администратор компании задаёт здесь сервер и учётные данные iiko. Все отчёты и справочники используют эти настройки.
+        </Typography.Paragraph>
+        <Form
+          layout="vertical"
+          form={iikoForm}
+          onFinish={async (values: { serverUrl: string; login: string; password: string }) => {
+            if (!auth) return;
+            try {
+              await saveIikoCreds(values).unwrap();
+              message.success('Настройки iiko сохранены');
+            } catch (e) {
+              message.error(e instanceof Error ? e.message : 'Не удалось сохранить настройки iiko');
+            }
+          }}
+        >
+          <Space
+            direction="vertical"
+            style={{ width: '100%' }}
+            size="middle"
+          >
+            <Form.Item
+              name="serverUrl"
+              label="Адрес сервера iiko"
+              rules={[{ required: true, message: 'Укажите адрес сервера' }]}
+            >
+              <Input placeholder="https://xxx-co.iiko.it" disabled={iikoLoading} />
+            </Form.Item>
+            <Form.Item
+              name="login"
+              label="Логин"
+              rules={[{ required: true, message: 'Введите логин' }]}
+            >
+              <Input placeholder="Администратор" disabled={iikoLoading} />
+            </Form.Item>
+            <Form.Item
+              name="password"
+              label="Пароль"
+              rules={[{ required: true, message: 'Введите пароль' }]}
+              extra="Пароль не хранится в открытом виде и используется только для получения токена iiko."
+            >
+              <Input.Password placeholder="Пароль от iiko" disabled={iikoLoading} />
+            </Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={iikoSaving}
+              disabled={!auth || auth.user.role !== 'owner'}
+            >
+              Сохранить настройки
+            </Button>
+            {auth && auth.user.role !== 'owner' && (
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                Только владелец компании может менять настройки подключения к iiko.
+              </Typography.Text>
+            )}
+          </Space>
+        </Form>
+      </Card>
       <div
         style={{
           display: 'flex',
@@ -245,7 +395,11 @@ export default function ReferencesPage() {
             ? 'Типы оплат'
             : detailsType === 'delivery'
               ? 'Значения фильтра «Доставка»'
-              : ''
+              : detailsType === 'productGroups'
+                ? 'Группы продукции'
+                : detailsType === 'iikoPoints'
+                  ? 'Точки'
+                  : ''
         }
         open={detailsOpen}
         onCancel={() => setDetailsOpen(false)}
@@ -268,26 +422,30 @@ export default function ReferencesPage() {
                 dataSource={payTypesList}
                 renderItem={(item) => (
                   <List.Item
-                    actions={[
-                      <Popconfirm
-                        key="del"
-                        title="Удалить из справочника?"
-                        description={item}
-                        onConfirm={() => handleDeletePayType(item)}
-                        okText="Удалить"
-                        cancelText="Отмена"
-                      >
-                        <Button
-                          type="text"
-                          danger
-                          size="small"
-                          icon={<DeleteOutlined />}
-                          loading={deleting === item}
-                        >
-                          Удалить
-                        </Button>
-                      </Popconfirm>,
-                    ]}
+                    actions={
+                      canManageRefs
+                        ? [
+                            <Popconfirm
+                              key="del"
+                              title="Удалить из справочника?"
+                              description={item}
+                              onConfirm={() => handleDeletePayType(item)}
+                              okText="Удалить"
+                              cancelText="Отмена"
+                            >
+                              <Button
+                                type="text"
+                                danger
+                                size="small"
+                                icon={<DeleteOutlined />}
+                                loading={deleting === item}
+                              >
+                                Удалить
+                              </Button>
+                            </Popconfirm>,
+                          ]
+                        : []
+                    }
                   >
                     {item}
                   </List.Item>
@@ -313,26 +471,127 @@ export default function ReferencesPage() {
                 dataSource={deliveryFlagList}
                 renderItem={(item) => (
                   <List.Item
-                    actions={[
-                      <Popconfirm
-                        key="del"
-                        title="Удалить из справочника?"
-                        description={item}
-                        onConfirm={() => handleDeleteDeliveryValue(item)}
-                        okText="Удалить"
-                        cancelText="Отмена"
-                      >
-                        <Button
-                          type="text"
-                          danger
-                          size="small"
-                          icon={<DeleteOutlined />}
-                          loading={deletingDelivery === item}
-                        >
-                          Удалить
-                        </Button>
-                      </Popconfirm>,
-                    ]}
+                    actions={
+                      canManageRefs
+                        ? [
+                            <Popconfirm
+                              key="del"
+                              title="Удалить из справочника?"
+                              description={item}
+                              onConfirm={() => handleDeleteDeliveryValue(item)}
+                              okText="Удалить"
+                              cancelText="Отмена"
+                            >
+                              <Button
+                                type="text"
+                                danger
+                                size="small"
+                                icon={<DeleteOutlined />}
+                                loading={deletingDelivery === item}
+                              >
+                                Удалить
+                              </Button>
+                            </Popconfirm>,
+                          ]
+                        : []
+                    }
+                  >
+                    {item}
+                  </List.Item>
+                )}
+              />
+            )}
+          </Space>
+        )}
+
+        {detailsType === 'productGroups' && (
+          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+            <Typography.Text style={{ color: 'var(--premium-muted)' }}>
+              Группы блюд (DishGroup) из iiko. Используются в фильтрах «Включить группы» и «Исключить группы» в отчёте по блюдам.
+              Нажмите «Обновить» в таблице, чтобы загрузить группы из iiko.
+            </Typography.Text>
+            {productGroupsList.length === 0 ? (
+              <Typography.Text style={{ color: 'var(--premium-muted)' }}>
+                Справочник пуст. Нажмите «Обновить» в таблице, чтобы загрузить группы продукции из iiko.
+              </Typography.Text>
+            ) : (
+              <List
+                size="small"
+                dataSource={productGroupsList}
+                renderItem={(item) => (
+                  <List.Item
+                    actions={
+                      canManageRefs
+                        ? [
+                            <Popconfirm
+                              key="del"
+                              title="Удалить из справочника?"
+                              description={item}
+                              onConfirm={() => handleDeleteProductGroupValue(item)}
+                              okText="Удалить"
+                              cancelText="Отмена"
+                            >
+                              <Button
+                                type="text"
+                                danger
+                                size="small"
+                                icon={<DeleteOutlined />}
+                                loading={deletingProductGroup === item}
+                              >
+                                Удалить
+                              </Button>
+                            </Popconfirm>,
+                          ]
+                        : []
+                    }
+                  >
+                    {item}
+                  </List.Item>
+                )}
+              />
+            )}
+          </Space>
+        )}
+
+        {detailsType === 'iikoPoints' && (
+          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+            <Typography.Text style={{ color: 'var(--premium-muted)' }}>
+              Торговые предприятия (Department) из iiko. Используются в отчётах как «Точка». Привязку к подразделениям настраивайте в форме создания/редактирования подразделения. Нажмите «Обновить» в таблице, чтобы загрузить список из iiko. Удалённые точки можно снова добавить синхронизацией.
+            </Typography.Text>
+            {iikoPointsList.length === 0 ? (
+              <Typography.Text style={{ color: 'var(--premium-muted)' }}>
+                Справочник пуст. Нажмите «Обновить» в таблице, чтобы загрузить точки из iiko.
+              </Typography.Text>
+            ) : (
+              <List
+                size="small"
+                dataSource={iikoPointsList}
+                renderItem={(item: string) => (
+                  <List.Item
+                    actions={
+                      canManageRefs
+                        ? [
+                            <Popconfirm
+                              key="del"
+                              title="Удалить точку из справочника?"
+                              description={item}
+                              onConfirm={() => handleDeletePoint(item)}
+                              okText="Удалить"
+                              cancelText="Отмена"
+                            >
+                              <Button
+                                type="text"
+                                danger
+                                size="small"
+                                icon={<DeleteOutlined />}
+                                loading={deletingPoint === item}
+                              >
+                                Удалить
+                              </Button>
+                            </Popconfirm>,
+                          ]
+                        : []
+                    }
                   >
                     {item}
                   </List.Item>

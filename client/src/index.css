@@ -76,6 +76,64 @@ body {
   box-shadow: var(--shadow-card);
 }
 
+/* ——— График смен: группировка по подразделениям ——— */
+.schedule-table .ant-table-tbody .schedule-group-row > td {
+  padding: 4px 12px !important;
+  vertical-align: middle !important;
+  background: rgba(15, 23, 42, 0.6) !important;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2) !important;
+}
+.schedule-table .ant-table-tbody .schedule-group-row:hover > td {
+  background: rgba(15, 23, 42, 0.7) !important;
+}
+.schedule-table .ant-table-tbody > tr:not(.schedule-group-row):nth-child(even) > td {
+  background: rgba(30, 41, 59, 0.25) !important;
+}
+.schedule-table .ant-table-tbody > tr:not(.schedule-group-row):hover > td {
+  background: rgba(34, 211, 238, 0.08) !important;
+}
+
+/* Выходные (суббота, воскресенье) — только заголовки столбцов в графике (специфичность выше общих стилей thead) */
+.app-layout-content .ant-table-wrapper .ant-table-thead > tr > th.schedule-col-weekend {
+  background: rgba(100, 116, 139, 0.5) !important;
+  color: var(--premium-muted) !important;
+}
+
+/* ——— Таблицы HR: подразделения, должности, сотрудники ——— */
+.hr-data-table .ant-table-thead > tr > th {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.95) 100%) !important;
+  color: var(--premium-muted) !important;
+  font-weight: 600 !important;
+  font-size: 11px !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 2px solid var(--premium-border) !important;
+  padding: 14px 18px !important;
+}
+.hr-data-table .ant-table-tbody > tr > td {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12) !important;
+  padding: 14px 18px !important;
+  color: var(--premium-text);
+  background: rgba(15, 23, 42, 0.4) !important;
+}
+.hr-data-table .ant-table-tbody > tr:nth-child(even) > td {
+  background: rgba(30, 41, 59, 0.35) !important;
+}
+.hr-data-table .ant-table-tbody > tr:hover > td {
+  background: rgba(34, 211, 238, 0.12) !important;
+}
+.hr-data-table .ant-table-tbody > tr:nth-child(even):hover > td {
+  background: rgba(34, 211, 238, 0.14) !important;
+}
+
+/* Страница подразделений — центрирование приоритета в тегах */
+.departments-page .priority-tag {
+  display: inline-flex !important;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
 /* ——— Сайдбар ——— */
 .app-layout-sider {
   scrollbar-width: thin;
@@ -103,6 +161,31 @@ body {
 .app-layout-sider.ant-layout-sider-collapsed .app-layout-logo a {
   justify-content: center;
 }
+
+/* Свёрнутая навигация — центрирование иконок */
+.app-layout .ant-menu-inline-collapsed.ant-menu-root {
+  width: 100% !important;
+}
+.app-layout .ant-menu-inline-collapsed .ant-menu-item {
+  padding: 0 !important;
+  margin: 4px 0 !important;
+  width: 100% !important;
+}
+.app-layout .ant-menu-inline-collapsed .ant-menu-item .ant-menu-item-content {
+  display: block !important;
+  width: 100% !important;
+  text-align: center !important;
+}
+.app-layout .ant-menu-inline-collapsed .ant-menu-item .ant-menu-item-icon {
+  display: inline-block !important;
+  margin: 0 !important;
+  margin-inline-end: 0 !important;
+  font-size: 20px !important;
+}
+.app-layout .ant-menu-inline-collapsed .ant-menu-title-content {
+  display: none !important;
+}
+
 .app-layout-logo-text {
   color: var(--premium-text);
   font-size: 18px;

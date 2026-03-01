@@ -475,11 +475,6 @@ function formatDateForOlap(d: dayjs.Dayjs): string {
   return d.format('DD.MM.YYYY');
 }
 
-/** Ключ хоста для сохранения настроек (без протокола и слэша в конце). */
-function getHostKey(serverUrl: string): string {
-  return serverUrl.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '') || serverUrl;
-}
-
 /** DD.MM.YYYY → YYYY-MM-DD для хранения в БД. */
 function olapDateToIso(olapDate: string): string {
   const [d, m, y] = olapDate.trim().split('.');
@@ -574,10 +569,9 @@ export default function SalesReportPage() {
 
   useEffect(() => {
     if (!auth) return;
-    const host = getHostKey(auth.serverUrl);
     (async () => {
       try {
-        const settings = await getSettings(host);
+        const settings = await getSettings(auth.token);
         if (settings.dateFrom && settings.dateTo) {
           form.setFieldsValue({
             dateFrom: dayjs(settings.dateFrom),
@@ -606,7 +600,7 @@ export default function SalesReportPage() {
         setSelectedPayTypes(loadedPayTypes);
         setDepartmentOrder(loadedDeptOrder);
 
-        const flagList = await getDeliveryFlagValues(host);
+        const flagList = await getDeliveryFlagValues(auth.token);
         setDeliveryFlagList(flagList);
         setDeliveryFilter(loadedDeliveryFilter);
 
@@ -625,8 +619,8 @@ export default function SalesReportPage() {
         // При ошибке настроек формируем отчёт с датами по умолчанию и текущими фильтрами
         await runReport();
       }
-      getPayTypes(host).then(setPayTypesList).catch(() => setPayTypesList([]));
-      getDeliveryFlagValues(host).then(setDeliveryFlagList).catch(() => setDeliveryFlagList([]));
+      getPayTypes(auth.token).then(setPayTypesList).catch(() => setPayTypesList([]));
+      getDeliveryFlagValues(auth.token).then(setDeliveryFlagList).catch(() => setDeliveryFlagList([]));
     })();
   }, [auth]);
 
@@ -664,9 +658,7 @@ export default function SalesReportPage() {
       if (effectiveDeliveryFilter && effectiveDeliveryFilter.trim()) {
         filters['Delivery.IsDelivery'] = { filterType: 'IncludeValues', values: [effectiveDeliveryFilter.trim()] };
       }
-      const result = await fetchOlapReport({
-        serverUrl: auth.serverUrl,
-        token: auth.token,
+      const result = await fetchOlapReport(auth.token, {
         report: 'SALES',
         from,
         to,
@@ -715,9 +707,7 @@ export default function SalesReportPage() {
 
       // Отдельный запрос: оплаты по типам (для круговой диаграммы)
       try {
-        const payResult = await fetchOlapReport({
-          serverUrl: auth.serverUrl,
-          token: auth.token,
+        const payResult = await fetchOlapReport(auth.token, {
           report: 'SALES',
           from,
           to,
@@ -756,13 +746,12 @@ export default function SalesReportPage() {
         setPaymentByType([]);
       }
 
-      // Сохраняем фильтры по хосту в БД; подставляем текущие настройки с сервера, чтобы не затереть порядок точек
-      const host = getHostKey(auth.serverUrl);
+      // Сохраняем фильтры в БД; подставляем текущие настройки с сервера, чтобы не затереть порядок точек
       const toSaveGroupBy = params?.groupByOverride ?? groupBy;
       const toSaveDeliveryFilter = effectiveDeliveryFilter;
       const toSaveDepartments = effectiveSelectedDepartments;
       const toSavePayTypes = effectiveSelectedPayTypes;
-      getSettings(host)
+      getSettings(auth.token)
         .then((current) => ({
           ...(current && typeof current === 'object' ? current : {}),
           dateFrom: olapDateToIso(from),
@@ -772,7 +761,7 @@ export default function SalesReportPage() {
           selectedDepartments: toSaveDepartments.length > 0 ? toSaveDepartments : undefined,
           selectedPayTypes: toSavePayTypes.length > 0 ? toSavePayTypes : undefined,
         }))
-        .then((merged) => saveSettings(host, merged))
+        .then((merged) => saveSettings(auth.token, merged))
         .catch(() => {});
     } catch (e) {
       if (isTokenExpiredError(e)) {
@@ -1533,10 +1522,9 @@ export default function SalesReportPage() {
             type="primary"
             onClick={async () => {
               if (!auth) return;
-              const host = getHostKey(auth.serverUrl);
               try {
-                const settings = await getSettings(host);
-                await saveSettings(host, { ...settings, departmentOrder: orderModalList });
+                const settings = await getSettings(auth.token);
+                await saveSettings(auth.token, { ...settings, departmentOrder: orderModalList });
                 setDepartmentOrder(orderModalList);
                 message.success('Порядок точек сохранён');
                 setOrderModalOpen(false);
