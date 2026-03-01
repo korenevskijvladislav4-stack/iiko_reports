@@ -7,6 +7,11 @@ import prisma from '@/lib/prisma.js';
 
 const port = environment.port;
 
+if (!process.env.DATABASE_URL) {
+  console.error('[server] DATABASE_URL is not set. Set it in .env or environment.');
+  process.exit(1);
+}
+
 server.listen(port, () => {
   const { api } = appConfig;
   const appUrl = environment.appUrl;
