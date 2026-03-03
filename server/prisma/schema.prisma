@@ -22,8 +22,8 @@ model Company {
   payTypes            CompanyPayType[]
   deliveryFlags       CompanyDeliveryFlag[]
   productGroups       CompanyProductGroup[]
+  products            CompanyProduct[]
   points              CompanyPoint[]
-  pointDepartmentLinks CompanyPointDepartment[]
   iikoCredentials     CompanyIikoCredentials?
 }
 
@@ -84,7 +84,6 @@ model Department {
 
   company             Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
   users               User[]
-  pointDepartmentLinks CompanyPointDepartment[]
 }
 
 model CompanyProductGroup {
@@ -105,27 +104,13 @@ model CompanyPoint {
   companyId String   @map("company_id") @db.VarChar(36)
   hostKey   String   @map("host_key") @db.VarChar(191)
   pointName String   @map("point_name") @db.VarChar(255)
+  departmentId String? @map("department_id") @db.VarChar(191)
   updatedAt DateTime @updatedAt @map("updated_at")
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@unique([companyId, hostKey, pointName])
   @@map("company_points")
-}
-
-model CompanyPointDepartment {
-  id           String   @id @default(uuid()) @db.VarChar(36)
-  companyId    String   @map("company_id") @db.VarChar(36)
-  hostKey      String   @map("host_key") @db.VarChar(191)
-  pointName    String   @map("point_name") @db.VarChar(255)
-  departmentId String   @map("department_id") @db.VarChar(36)
-  updatedAt    DateTime @updatedAt @map("updated_at")
-
-  company    Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-
-  @@unique([companyId, hostKey, pointName])
-  @@map("company_point_department")
 }
 
 model Position {
@@ -179,4 +164,19 @@ model CompanyDeliveryFlag {
 
   @@unique([companyId, hostKey, value])
   @@map("company_delivery_flag_enum")
+}
+
+model CompanyProduct {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  companyId String   @map("company_id") @db.VarChar(36)
+  hostKey   String   @map("host_key") @db.VarChar(191)
+  productId String   @map("product_id") @db.VarChar(191)
+  name      String   @db.VarChar(255)
+  groupName String?  @map("group_name") @db.VarChar(255)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, hostKey, productId])
+  @@map("company_products")
 }

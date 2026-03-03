@@ -156,6 +156,78 @@ export const api = createApi({
       },
     }),
 
+    // Store balance report (остатки по точкам/складам)
+    getStoreBalanceReport: builder.mutation<
+      {
+        pointName: string;
+        departmentId: string | null;
+        storeId: string;
+        productId: string;
+        productName: string | null;
+        productGroup: string | null;
+        amount: number;
+        sum: number;
+        totalSold: number;
+        salesByDay: { date: string; quantitySold: number }[];
+      }[],
+      { from?: string; to?: string } | void
+    >({
+      query: (params) => {
+        const search = new URLSearchParams();
+        if (params && params.from) search.set('from', params.from);
+        if (params && params.to) search.set('to', params.to);
+        const qs = search.toString();
+        return {
+          url: `store-balance${qs ? `?${qs}` : ''}`,
+          method: 'GET',
+        };
+      },
+      transformResponse: (response: unknown) => {
+        const data = unwrapData<{ rows?: unknown[] }>(response);
+        return (Array.isArray(data?.rows) ? data.rows : []) as {
+          pointName: string;
+          departmentId: string | null;
+          storeId: string;
+          productId: string;
+          productName: string | null;
+          productGroup: string | null;
+          amount: number;
+          sum: number;
+          totalSold: number;
+          salesByDay: { date: string; quantitySold: number }[];
+        }[];
+      },
+    }),
+
+    // Products reference (справочник номенклатуры)
+    getProducts: builder.query<{ productId: string; name: string }[], void>({
+      query: () => 'products',
+      transformResponse: (response: unknown) => {
+        const data = unwrapData<unknown>(response);
+        return Array.isArray(data) ? (data as { productId: string; name: string }[]) : [];
+      },
+      providesTags: ['Products'],
+    }),
+    syncProducts: builder.mutation<{ ok: boolean }, void>({
+      query: () => ({
+        url: 'products/sync',
+        method: 'POST',
+      }),
+      transformResponse: (response: unknown) => {
+        const data = unwrapData<{ ok?: boolean }>(response);
+        return { ok: data.ok ?? true };
+      },
+      invalidatesTags: ['Products'],
+    }),
+    deleteProduct: builder.mutation<void, string>({
+      query: (productId) => ({
+        url: 'products',
+        method: 'DELETE',
+        body: { productId },
+      }),
+      invalidatesTags: ['Products'],
+    }),
+
     // Reports / OLAP
     fetchOlapReport: builder.mutation<{ data?: unknown; raw?: string; isXml?: boolean }, OlapPayload>({
       query: (body) => ({
@@ -522,6 +594,10 @@ export const {
   useGetIikoCredentialsQuery,
   useSaveIikoCredentialsMutation,
   useGetProductCostReportMutation,
+  useGetStoreBalanceReportMutation,
+  useGetProductsQuery,
+  useSyncProductsMutation,
+  useDeleteProductMutation,
   useFetchOlapReportMutation,
   useGetSettingsQuery,
   useSaveSettingsMutation,

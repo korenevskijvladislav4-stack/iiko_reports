@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Card,
   Table,
@@ -47,6 +47,7 @@ export default function ProductCostPage() {
   const [error, setError] = useState<string | null>(null);
   const [productGroupFilter, setProductGroupFilter] = useState<string[]>([]);
   const [quickPeriod, setQuickPeriod] = useState<string | null>(null);
+  const [isInitialLoaded, setIsInitialLoaded] = useState(false);
 
   const [getReport, { isLoading: loading }] = useGetProductCostReportMutation();
   const { data: productGroupOptions = [] } = useGetProductGroupValuesQuery(undefined, { skip: !auth });
@@ -77,7 +78,18 @@ export default function ProductCostPage() {
       setRows([]);
       setTotalDepartmentSalary(0);
     }
+    setIsInitialLoaded(true);
   };
+
+  useEffect(() => {
+    if (!auth || isInitialLoaded) return;
+    // по умолчанию берём последний месяц (как раньше initialValues)
+    form.setFieldsValue({
+      dateFrom: dayjs().startOf('month'),
+      dateTo: dayjs().endOf('month'),
+    });
+    void runReport();
+  }, [auth, isInitialLoaded, form]);
 
   const filteredRows = useMemo(() => {
     if (productGroupFilter.length === 0) return rows;

@@ -42,6 +42,18 @@ export async function getAccessToken(
 
 export type OlapReportType = 'SALES' | 'TRANSACTIONS' | 'DELIVERIES' | 'STOCK' | 'BALANCE';
 
+export type IikoDepartment = {
+  id: string;
+  name: string;
+  isActive?: boolean;
+};
+
+export type IikoProduct = {
+  id: string;
+  name: string;
+  groupName?: string;
+};
+
 /**
  * Преобразует DD.MM.YYYY в дату для OLAP v2.
  * Для периода типа DATE время не указывается (только YYYY-MM-DD).
@@ -150,4 +162,52 @@ export async function fetchOlapReportV2(
     throw new Error(`iiko OLAP v2 failed: ${res.status} ${text}`);
   }
   return res.text();
+}
+
+/**
+ * Список подразделений (departments) из iiko.
+ * Типичный эндпоинт: GET {serverUrl}/resto/api/departments?key=TOKEN
+ */
+export async function fetchIikoDepartments(serverUrl: string, token: string): Promise<IikoDepartment[]> {
+  const base = normalizeServerUrl(serverUrl);
+  const url = `${base}api/departments?key=${encodeURIComponent(token)}`;
+  const res = await fetch(url, { method: 'GET' });
+  if (!res.ok) {
+    // На некоторых установках этого эндпоинта может не быть — в этом случае просто пропускаем departmentId
+    if (res.status === 404) return [];
+    const text = await res.text();
+    throw new Error(`iiko departments failed: ${res.status} ${text}`);
+  }
+  const data = await res.json();
+  if (!Array.isArray(data)) return [];
+  return data
+    .map((d: any) => ({
+      id: String(d.id),
+      name: String(d.name ?? d.departmentName ?? '').trim(),
+      isActive: d.isActive ?? d.active ?? true,
+    }))
+    .filter((d) => d.id && d.name);
+}
+
+/**
+ * Справочник номенклатуры (продукты) из iiko.
+ * Эндпоинт: GET {serverUrl}/resto/api/v2/entities/products/list?key=TOKEN
+ */
+export async function fetchIikoProducts(serverUrl: string, token: string): Promise<IikoProduct[]> {
+  const base = normalizeServerUrl(serverUrl);
+  const url = `${base}api/v2/entities/products/list?key=${encodeURIComponent(token)}`;
+  const res = await fetch(url, { method: 'GET' });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`iiko products failed: ${res.status} ${text}`);
+  }
+  const data = await res.json();
+  if (!Array.isArray(data)) return [];
+  return data
+    .map((p: any) => ({
+      id: String(p.id),
+      name: String(p.name ?? p.productName ?? '').trim(),
+      groupName: p.parentName ? String(p.parentName).trim() : undefined,
+    }))
+    .filter((p) => p.id && p.name);
 }

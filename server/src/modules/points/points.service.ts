@@ -8,8 +8,9 @@ function normalizeHostKey(url: string): string {
 }
 
 const DEPARTMENT_KEYS = ['Department', 'department'];
+const DEPARTMENT_ID_KEYS = ['Department.Id', 'department.id', 'DepartmentID'];
 
-function extractPointNamesFromOlap(raw: string): string[] {
+function extractPointsFromOlap(raw: string): { name: string; departmentId?: string }[] {
   const data = JSON.parse(raw) as Record<string, unknown>;
   const report = (data.report ?? data) as Record<string, unknown>;
   let rows: unknown[] = [];
@@ -20,19 +21,26 @@ function extractPointNamesFromOlap(raw: string): string[] {
   else if (Array.isArray(data.rows)) rows = data.rows as unknown[];
   else if (Array.isArray(data.row)) rows = data.row as unknown[];
   else if (Array.isArray(data.data)) rows = data.data as unknown[];
-  const set = new Set<string>();
+  const map = new Map<string, string | undefined>(); // name -> departmentId
   for (const r of rows) {
-    let val = '';
+    let name = '';
+    let depId: string | undefined;
     if (Array.isArray(r)) {
-      val = r[0] != null ? String(r[0]).trim() : '';
+      // Ожидаем порядок [Department, Department.Id, ...]
+      name = r[0] != null ? String(r[0]).trim() : '';
+      if (r[1] != null) depId = String(r[1]).trim();
     } else if (r && typeof r === 'object') {
       const row = r as Record<string, unknown>;
       const v = DEPARTMENT_KEYS.map((k) => row[k]).find((x) => x != null && String(x).trim() !== '');
-      val = v != null ? String(v).trim() : '';
+      name = v != null ? String(v).trim() : '';
+      const idVal = DEPARTMENT_ID_KEYS.map((k) => row[k]).find((x) => x != null && String(x).trim() !== '');
+      if (idVal != null) depId = String(idVal).trim();
     }
-    if (val) set.add(val);
+    if (!name) continue;
+    const key = name;
+    if (!map.has(key)) map.set(key, depId);
   }
-  return Array.from(set);
+  return Array.from(map.entries()).map(([n, id]) => ({ name: n, departmentId: id }));
 }
 
 export type PointDepartmentLink = { pointName: string; departmentId: string; departmentName?: string };
@@ -62,33 +70,29 @@ export default class PointsService {
       report: 'SALES',
       from: fromStr,
       to: toStr,
-      groupByRowFields: ['Department'] as const,
+      groupByRowFields: ['Department', 'Department.Id'] as const,
       aggregateFields: ['DishSumInt'] as const,
     });
-    const pointNames = extractPointNamesFromOlap(raw).sort();
+    const points = extractPointsFromOlap(raw).sort((a, b) => a.name.localeCompare(b.name));
+
     await prisma.companyPoint.deleteMany({ where: { companyId, hostKey } });
-    for (const pointName of pointNames) {
+    for (const p of points) {
       await prisma.companyPoint.create({
-        data: { companyId, hostKey, pointName },
+        data: {
+          companyId,
+          hostKey,
+          pointName: p.name,
+          departmentId: p.departmentId ?? undefined,
+        },
       });
     }
-    return pointNames;
+    return points.map((p) => p.name);
   }
 
   async listPointDepartmentLinks(companyId: string): Promise<PointDepartmentLink[]> {
-    const creds = await this.iikoCreds.getHashed(companyId);
-    if (!creds) return [];
-    const hostKey = normalizeHostKey(creds.serverUrl);
-    const rows = await prisma.companyPointDepartment.findMany({
-      where: { companyId, hostKey },
-      include: { department: { select: { id: true, name: true } } },
-      orderBy: { pointName: 'asc' },
-    });
-    return rows.map((r) => ({
-      pointName: r.pointName,
-      departmentId: r.departmentId,
-      departmentName: r.department.name,
-    }));
+    // Таблица связей точка↔подразделение удалена; возвращаем пустой список для совместимости API.
+    void companyId;
+    return [];
   }
 
   async setPointDepartment(
@@ -96,47 +100,15 @@ export default class PointsService {
     pointName: string,
     departmentId: string
   ): Promise<PointDepartmentLink> {
-    const creds = await this.iikoCreds.getHashed(companyId);
-    if (!creds) throw new HttpNotFoundError('iiko credentials not set');
-    const hostKey = normalizeHostKey(creds.serverUrl);
-    const department = await prisma.department.findFirst({
-      where: { id: departmentId, companyId },
-    });
-    if (!department) throw new HttpNotFoundError('Department not found');
-    const pointNameTrimmed = String(pointName).trim();
-    const existing = await prisma.companyPointDepartment.findUnique({
-      where: {
-        companyId_hostKey_pointName: { companyId, hostKey, pointName: pointNameTrimmed },
-      },
-      include: { department: { select: { name: true } } },
-    });
-    if (existing) {
-      await prisma.companyPointDepartment.update({
-        where: { id: existing.id },
-        data: { departmentId },
-      });
-    } else {
-      await prisma.companyPoint.upsert({
-        where: {
-          companyId_hostKey_pointName: { companyId, hostKey, pointName: pointNameTrimmed },
-        },
-        create: { companyId, hostKey, pointName: pointNameTrimmed },
-        update: {},
-      });
-      await prisma.companyPointDepartment.create({
-        data: { companyId, hostKey, pointName: pointNameTrimmed, departmentId },
-      });
-    }
-    return { pointName: pointNameTrimmed, departmentId, departmentName: department.name };
+    // Связи точка↔подразделение больше не поддерживаются; считаем, что точка привязана ко всем подразделениям.
+    void companyId;
+    return { pointName, departmentId, departmentName: undefined };
   }
 
   async unsetPointDepartment(companyId: string, pointName: string): Promise<void> {
-    const creds = await this.iikoCreds.getHashed(companyId);
-    if (!creds) throw new HttpNotFoundError('iiko credentials not set');
-    const hostKey = normalizeHostKey(creds.serverUrl);
-    await prisma.companyPointDepartment.deleteMany({
-      where: { companyId, hostKey, pointName: String(pointName).trim() },
-    });
+    // Ничего не делаем: явных связей больше нет.
+    void companyId;
+    void pointName;
   }
 
   async deletePoint(companyId: string, pointName: string): Promise<void> {
@@ -144,9 +116,6 @@ export default class PointsService {
     if (!creds) throw new HttpNotFoundError('iiko credentials not set');
     const hostKey = normalizeHostKey(creds.serverUrl);
     const pointNameTrimmed = String(pointName).trim();
-    await prisma.companyPointDepartment.deleteMany({
-      where: { companyId, hostKey, pointName: pointNameTrimmed },
-    });
     await prisma.companyPoint.deleteMany({
       where: { companyId, hostKey, pointName: pointNameTrimmed },
     });

@@ -7,6 +7,7 @@ import HomePage from './pages/HomePage';
 import SalesReportPage from './pages/SalesReportPage';
 import DishesReportPage from './pages/DishesReportPage';
 import CashiersReportPage from './pages/CashiersReportPage';
+import StoreBalancePage from './pages/StoreBalancePage';
 import ReferencesPage from './pages/ReferencesPage';
 import DepartmentsPage from './pages/DepartmentsPage';
 import EmployeesPage from './pages/EmployeesPage';
@@ -46,6 +47,7 @@ export default function App() {
             <Route path="reports/dishes" element={<StaffRedirect><DishesReportPage /></StaffRedirect>} />
             <Route path="reports/cashiers" element={<StaffRedirect><CashiersReportPage /></StaffRedirect>} />
             <Route path="reports/product-cost" element={<StaffRedirect><ProductCostPage /></StaffRedirect>} />
+          <Route path="reports/store-balance" element={<StaffRedirect><StoreBalancePage /></StaffRedirect>} />
             <Route path="references" element={<OwnerOnly><ReferencesPage /></OwnerOnly>} />
             <Route path="hr/departments" element={<StaffRedirect allowForManager><DepartmentsPage /></StaffRedirect>} />
             <Route path="hr/employees" element={<EmployeesPage />} />

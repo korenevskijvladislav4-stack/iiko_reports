@@ -16,6 +16,9 @@ import {
   useGetPointsQuery,
   useSyncPointsMutation,
   useDeletePointMutation,
+  useGetProductsQuery,
+  useSyncProductsMutation,
+  useDeleteProductMutation,
   useGetIikoCredentialsQuery,
   useSaveIikoCredentialsMutation,
 } from '../api/rtkApi';
@@ -35,25 +38,30 @@ export default function ReferencesPage() {
   const { data: iikoPointsData = [] } = useGetPointsQuery(undefined, { skip: !auth });
   const [syncPoints, { isLoading: syncPointsLoading }] = useSyncPointsMutation();
   const [deletePointMutation] = useDeletePointMutation();
+  const { data: productsData = [] } = useGetProductsQuery(undefined, { skip: !auth });
+  const [syncProducts, { isLoading: productsSyncLoading }] = useSyncProductsMutation();
+  const [deleteProductMutation] = useDeleteProductMutation();
   const { data: iikoCreds, isLoading: iikoLoading } = useGetIikoCredentialsQuery(undefined, { skip: !auth });
   const [saveIikoCreds, { isLoading: iikoSaving }] = useSaveIikoCredentialsMutation();
 
   const [deleting, setDeleting] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [detailsType, setDetailsType] = useState<'payTypes' | 'delivery' | 'productGroups' | 'iikoPoints' | null>(null);
+  const [detailsType, setDetailsType] = useState<'payTypes' | 'delivery' | 'productGroups' | 'iikoPoints' | 'products' | null>(null);
   const [deletingDelivery, setDeletingDelivery] = useState<string | null>(null);
   const [deletingProductGroup, setDeletingProductGroup] = useState<string | null>(null);
   const [deletingPoint, setDeletingPoint] = useState<string | null>(null);
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   const [iikoForm] = Form.useForm();
 
   type ReferenceRow = {
-    key: 'payTypes' | 'delivery' | 'productGroups' | 'iikoPoints';
+    key: 'payTypes' | 'delivery' | 'productGroups' | 'iikoPoints' | 'products';
     name: string;
     description: string;
     count: number;
   };
 
   const iikoPointsList = Array.isArray(iikoPointsData) ? iikoPointsData : [];
+  const productsList = Array.isArray(productsData) ? (productsData as { productId: string; name: string }[]) : [];
 
   useEffect(() => {
     if (iikoCreds) {
@@ -161,6 +169,29 @@ export default function ReferencesPage() {
     }
   };
 
+  const handleSyncProducts = async () => {
+    if (!auth) return;
+    try {
+      await syncProducts().unwrap();
+      message.success('Справочник номенклатуры обновлён');
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Ошибка синхронизации');
+    }
+  };
+
+  const handleDeleteProduct = async (productId: string) => {
+    if (!auth) return;
+    setDeletingProductId(productId);
+    try {
+      await deleteProductMutation(productId).unwrap();
+      message.success('Товар удалён из справочника');
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Ошибка удаления');
+    } finally {
+      setDeletingProductId(null);
+    }
+  };
+
   const data: ReferenceRow[] = [
     {
       key: 'payTypes',
@@ -185,6 +216,12 @@ export default function ReferencesPage() {
       name: 'Точки',
       description: 'Торговые предприятия (Department) из iiko. Привязку к подразделениям настраивайте в форме создания/редактирования подразделения.',
       count: iikoPointsList.length,
+    },
+    {
+      key: 'products',
+      name: 'Номенклатура (товары)',
+      description: 'Все элементы номенклатуры из iiko. Используются для отображения названий товаров в отчётах по остаткам.',
+      count: productsList.length,
     },
   ];
 
@@ -263,6 +300,15 @@ export default function ReferencesPage() {
                 icon={<SyncOutlined />}
                 onClick={handleSyncIikoPoints}
                 loading={syncPointsLoading}
+              >
+                Обновить
+              </Button>
+            ) : record.key === 'products' ? (
+              <Button
+                size="small"
+                icon={<SyncOutlined />}
+                onClick={handleSyncProducts}
+                loading={productsSyncLoading}
               >
                 Обновить
               </Button>
@@ -594,6 +640,59 @@ export default function ReferencesPage() {
                     }
                   >
                     {item}
+                  </List.Item>
+                )}
+              />
+            )}
+          </Space>
+        )}
+
+        {detailsType === 'products' && (
+          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+            <Typography.Text style={{ color: 'var(--premium-muted)' }}>
+              Справочник номенклатуры из iiko (товары/блюда). Используется, чтобы отображать названия товаров в отчётах по остаткам.
+            </Typography.Text>
+            {productsList.length === 0 ? (
+              <Typography.Text style={{ color: 'var(--premium-muted)' }}>
+                Справочник пуст. Нажмите «Обновить» в таблице, чтобы загрузить номенклатуру из iiko.
+              </Typography.Text>
+            ) : (
+              <List
+                size="small"
+                dataSource={productsList}
+                renderItem={({ productId, name }) => (
+                  <List.Item
+                    actions={
+                      canManageRefs
+                        ? [
+                            <Popconfirm
+                              key="del"
+                              title="Удалить товар из справочника?"
+                              description={name}
+                              onConfirm={() => handleDeleteProduct(productId)}
+                              okText="Удалить"
+                              cancelText="Отмена"
+                            >
+                              <Button
+                                type="text"
+                                danger
+                                size="small"
+                                icon={<DeleteOutlined />}
+                                loading={deletingProductId === productId}
+                              >
+                                Удалить
+                              </Button>
+                            </Popconfirm>,
+                          ]
+                        : []
+                    }
+                  >
+                    <Space direction="vertical" size={0}>
+                      <Typography.Text>{name}</Typography.Text>
+                      <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                        {productId}
+                      </Typography.Text>
+                    </Space>
                   </List.Item>
                 )}
               />
