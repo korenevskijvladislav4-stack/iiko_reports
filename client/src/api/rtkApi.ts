@@ -71,7 +71,7 @@ export const api = createApi({
       return headers;
     },
   }),
-  tagTypes: ['Settings', 'PayTypes', 'DeliveryFlags', 'ProductGroups', 'Points', 'Departments', 'Positions', 'Users', 'Schedules', 'ProductCost'],
+  tagTypes: ['Settings', 'PayTypes', 'DeliveryFlags', 'ProductGroups', 'Points', 'Departments', 'Positions', 'Users', 'Schedules', 'ProductCost', 'Products'],
   endpoints: (builder) => ({
     // Auth
     login: builder.mutation<AuthResult, { email: string; password: string }>({

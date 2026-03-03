@@ -262,7 +262,7 @@ export default function StoreBalancePage() {
         <Alert
           type="error"
           message="Ошибка загрузки отчёта остатков"
-          description={error instanceof Error ? error.message : 'Не удалось получить данные из iiko'}
+          description={error}
           showIcon
           style={{ marginBottom: 16 }}
         />
