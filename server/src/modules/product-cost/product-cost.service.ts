@@ -77,7 +77,7 @@ export default class ProductCostService {
     const fromIso = from.includes('.') ? ddMmYyyyToIso(from) : from;
     const toIso = to.includes('.') ? ddMmYyyyToIso(to) : to;
 
-    const { serverUrl, token } = await this.iikoCreds.getToken(companyId);
+    return this.iikoCreds.withToken(companyId, async ({ serverUrl, token }) => {
     const raw = await fetchOlapReportV2(serverUrl, token, {
       report: 'SALES',
       from: fromNorm,
@@ -201,5 +201,6 @@ export default class ProductCostService {
     });
 
     return { rows: result, totalDepartmentSalary };
+    });
   }
 }

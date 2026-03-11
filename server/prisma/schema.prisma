@@ -13,7 +13,7 @@ datasource db {
 model Company {
   id        String   @id @default(uuid()) @db.VarChar(36)
   name      String   @db.VarChar(255)
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
 
   users               User[]
   departments         Department[]
@@ -25,6 +25,9 @@ model Company {
   products            CompanyProduct[]
   points              CompanyPoint[]
   iikoCredentials     CompanyIikoCredentials?
+  iikoAccessTokens    IikoAccessToken[]
+
+  @@map("companies")
 }
 
 model User {
@@ -46,6 +49,8 @@ model User {
   position   Position?        @relation(fields: [positionId], references: [id], onDelete: SetNull)
   reportFilters UserReportFilter[]
   schedules  UserSchedule[]
+
+  @@map("users")
 }
 
 model CompanyIikoCredentials {
@@ -59,6 +64,18 @@ model CompanyIikoCredentials {
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@map("company_iiko_credentials")
+}
+
+model IikoAccessToken {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  companyId String   @map("company_id") @db.VarChar(36)
+  token     String   @db.VarChar(500)
+  isExpired Boolean  @default(false) @map("is_expired")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("iiko_access_tokens")
 }
 
 model UserReportFilter {
@@ -84,6 +101,8 @@ model Department {
 
   company             Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
   users               User[]
+
+  @@map("departments")
 }
 
 model CompanyProductGroup {
@@ -122,6 +141,8 @@ model Position {
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
   users   User[]
+
+  @@map("positions")
 }
 
 model UserSchedule {

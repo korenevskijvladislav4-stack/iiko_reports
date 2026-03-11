@@ -27,6 +27,7 @@ const allMenuItems = [
   { key: '/reports/dishes', icon: <AppstoreOutlined />, label: 'Отчёт по блюдам' },
   { key: '/reports/cashiers', icon: <UserOutlined />, label: 'Отчёт по кассирам' },
   { key: '/reports/product-cost', icon: <CalculatorOutlined />, label: 'Стоимость товара' },
+  { key: '/reports/department-salary', icon: <TeamOutlined />, label: 'Зарплата подразделений' },
   { key: '/reports/store-balance', icon: <DatabaseOutlined />, label: 'Остатки по складам' },
   { key: '/references', icon: <DatabaseOutlined />, label: 'Справочники' },
   { key: '/hr/departments', icon: <ApartmentOutlined />, label: 'Подразделения и должности' },
@@ -45,6 +46,7 @@ const sectionTitles: Record<string, string> = {
   '/reports/dishes': 'Отчёт по блюдам',
   '/reports/cashiers': 'Отчёт по кассирам',
   '/reports/product-cost': 'Формирование стоимости товара',
+  '/reports/department-salary': 'Зарплата подразделений',
   '/reports/store-balance': 'Остатки по складам',
   '/references': 'Справочники',
   '/hr/departments': 'Подразделения и должности',
@@ -81,6 +83,7 @@ export default function AppLayout() {
         collapsible
         collapsed={collapsed}
         width={248}
+        collapsedWidth={80}
         className="app-layout-sider"
         style={{
           position: 'fixed',
@@ -132,7 +135,7 @@ export default function AppLayout() {
           className="app-layout-menu"
           style={{
             marginTop: 8,
-            padding: '0 12px 16px',
+            padding: collapsed ? '0 0 16px' : '0 12px 16px',
             background: 'transparent',
             border: 'none',
           }}

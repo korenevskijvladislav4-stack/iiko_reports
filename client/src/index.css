@@ -162,28 +162,39 @@ body {
   justify-content: center;
 }
 
-/* Свёрнутая навигация — центрирование иконок */
+/* Свёрнутая навигация — иконки по центру сайдбара */
 .app-layout .ant-menu-inline-collapsed.ant-menu-root {
   width: 100% !important;
+  padding-inline: 0 !important;
 }
 .app-layout .ant-menu-inline-collapsed .ant-menu-item {
   padding: 0 !important;
   margin: 4px 0 !important;
   width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
 }
 .app-layout .ant-menu-inline-collapsed .ant-menu-item .ant-menu-item-content {
-  display: block !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
   width: 100% !important;
   text-align: center !important;
 }
 .app-layout .ant-menu-inline-collapsed .ant-menu-item .ant-menu-item-icon {
-  display: inline-block !important;
+  display: inline-flex !important;
   margin: 0 !important;
   margin-inline-end: 0 !important;
   font-size: 20px !important;
+  align-items: center !important;
 }
 .app-layout .ant-menu-inline-collapsed .ant-menu-title-content {
   display: none !important;
+}
+/* Выбранный пункт в свёрнутом виде — без боковых отступов, по центру */
+.app-layout-sider.ant-layout-sider-collapsed .ant-menu-dark.ant-menu-inline .ant-menu-item.ant-menu-item-selected {
+  margin: 4px 0 !important;
+  width: 100% !important;
 }
 
 .app-layout-logo-text {

@@ -11,7 +11,7 @@ export default class ProductsService {
   private iikoCreds = new IikoCredentialsService();
 
   async sync(companyId: string): Promise<void> {
-    const { serverUrl, token, hostKey } = await this.iikoCreds.getToken(companyId);
+    await this.iikoCreds.withToken(companyId, async ({ serverUrl, token, hostKey }) => {
     const to = new Date();
     const from = new Date(to.getFullYear() - 2, to.getMonth(), to.getDate());
     const fromStr = `${String(from.getDate()).padStart(2, '0')}.${String(from.getMonth() + 1).padStart(2, '0')}.${from.getFullYear()}`;
@@ -64,6 +64,7 @@ export default class ProductsService {
         },
       });
     }
+    });
   }
 
   async mapById(companyId: string): Promise<Map<string, string>> {

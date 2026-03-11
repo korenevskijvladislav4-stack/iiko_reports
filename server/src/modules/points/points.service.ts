@@ -61,32 +61,33 @@ export default class PointsService {
   }
 
   async syncPoints(companyId: string): Promise<string[]> {
-    const { serverUrl, token, hostKey } = await this.iikoCreds.getToken(companyId);
-    const to = new Date();
-    const from = new Date(to.getFullYear() - 2, to.getMonth(), to.getDate());
-    const fromStr = `${String(from.getDate()).padStart(2, '0')}.${String(from.getMonth() + 1).padStart(2, '0')}.${from.getFullYear()}`;
-    const toStr = `${String(to.getDate()).padStart(2, '0')}.${String(to.getMonth() + 1).padStart(2, '0')}.${to.getFullYear()}`;
-    const raw = await fetchOlapReportV2(serverUrl, token, {
-      report: 'SALES',
-      from: fromStr,
-      to: toStr,
-      groupByRowFields: ['Department', 'Department.Id'] as const,
-      aggregateFields: ['DishSumInt'] as const,
-    });
-    const points = extractPointsFromOlap(raw).sort((a, b) => a.name.localeCompare(b.name));
-
-    await prisma.companyPoint.deleteMany({ where: { companyId, hostKey } });
-    for (const p of points) {
-      await prisma.companyPoint.create({
-        data: {
-          companyId,
-          hostKey,
-          pointName: p.name,
-          departmentId: p.departmentId ?? undefined,
-        },
+    return this.iikoCreds.withToken(companyId, async ({ serverUrl, token, hostKey }) => {
+      const to = new Date();
+      const from = new Date(to.getFullYear() - 2, to.getMonth(), to.getDate());
+      const fromStr = `${String(from.getDate()).padStart(2, '0')}.${String(from.getMonth() + 1).padStart(2, '0')}.${from.getFullYear()}`;
+      const toStr = `${String(to.getDate()).padStart(2, '0')}.${String(to.getMonth() + 1).padStart(2, '0')}.${to.getFullYear()}`;
+      const raw = await fetchOlapReportV2(serverUrl, token, {
+        report: 'SALES',
+        from: fromStr,
+        to: toStr,
+        groupByRowFields: ['Department', 'Department.Id'] as const,
+        aggregateFields: ['DishSumInt'] as const,
       });
-    }
-    return points.map((p) => p.name);
+      const points = extractPointsFromOlap(raw).sort((a, b) => a.name.localeCompare(b.name));
+
+      await prisma.companyPoint.deleteMany({ where: { companyId, hostKey } });
+      for (const p of points) {
+        await prisma.companyPoint.create({
+          data: {
+            companyId,
+            hostKey,
+            pointName: p.name,
+            departmentId: p.departmentId ?? undefined,
+          },
+        });
+      }
+      return points.map((p) => p.name);
+    });
   }
 
   async listPointDepartmentLinks(companyId: string): Promise<PointDepartmentLink[]> {

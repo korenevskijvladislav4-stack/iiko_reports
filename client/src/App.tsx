@@ -13,6 +13,7 @@ import DepartmentsPage from './pages/DepartmentsPage';
 import EmployeesPage from './pages/EmployeesPage';
 import SchedulePage from './pages/SchedulePage';
 import ProductCostPage from './pages/ProductCostPage';
+import DepartmentSalaryPage from './pages/DepartmentSalaryPage';
 
 /** Редирект сотрудников (staff) на страницу сотрудников. Менеджеры (scheduleAccessRole manager) дополнительно имеют доступ к подразделениям. */
 function StaffRedirect({ children, allowForManager = false }: { children: React.ReactNode; allowForManager?: boolean }) {
@@ -47,7 +48,8 @@ export default function App() {
             <Route path="reports/dishes" element={<StaffRedirect><DishesReportPage /></StaffRedirect>} />
             <Route path="reports/cashiers" element={<StaffRedirect><CashiersReportPage /></StaffRedirect>} />
             <Route path="reports/product-cost" element={<StaffRedirect><ProductCostPage /></StaffRedirect>} />
-          <Route path="reports/store-balance" element={<StaffRedirect><StoreBalancePage /></StaffRedirect>} />
+            <Route path="reports/store-balance" element={<StaffRedirect><StoreBalancePage /></StaffRedirect>} />
+            <Route path="reports/department-salary" element={<StaffRedirect><DepartmentSalaryPage /></StaffRedirect>} />
             <Route path="references" element={<OwnerOnly><ReferencesPage /></OwnerOnly>} />
             <Route path="hr/departments" element={<StaffRedirect allowForManager><DepartmentsPage /></StaffRedirect>} />
             <Route path="hr/employees" element={<EmployeesPage />} />

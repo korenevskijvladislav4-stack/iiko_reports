@@ -1,4 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import type { DepartmentSalaryReportParams, DepartmentSalaryReportRow } from '../pages/department-salary/types';
+import type { ProductCostReportParams, ProductCostReportRow } from '../pages/product-cost/types';
+import type { StoreBalanceReportParams, StoreBalanceReportRow } from '../pages/store-balance/types';
 
 const API_ENV = import.meta.env.MODE === 'production' ? 'production' : 'development';
 const API_BASE = `/api/v1/${API_ENV}`;
@@ -60,6 +63,9 @@ export type OlapPayload = {
   filters?: Record<string, unknown>;
 };
 
+/** Подразделение из API (departments) */
+export type ApiDepartment = { id: string; name: string };
+
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({
@@ -71,7 +77,7 @@ export const api = createApi({
       return headers;
     },
   }),
-  tagTypes: ['Settings', 'PayTypes', 'DeliveryFlags', 'ProductGroups', 'Points', 'Departments', 'Positions', 'Users', 'Schedules', 'ProductCost', 'Products'],
+  tagTypes: ['Settings', 'PayTypes', 'DeliveryFlags', 'ProductGroups', 'Points', 'Departments', 'Positions', 'Users', 'Schedules', 'ProductCost', 'Products', 'DepartmentSalaryReport', 'ProductCostReport', 'StoreBalanceReport'],
   endpoints: (builder) => ({
     // Auth
     login: builder.mutation<AuthResult, { email: string; password: string }>({
@@ -138,65 +144,49 @@ export const api = createApi({
       }),
     }),
 
-    // Product cost report (BE)
-    getProductCostReport: builder.mutation<
-      { rows: { productGroup: string; product: string; quantitySold: number; costFromIiko: number; departmentSalary: number; humanCost: number; currentPriceFromIiko: number }[]; totalDepartmentSalary: number },
-      { from: string; to: string }
+    // Product cost report (BE) — query с кэшем по периоду
+    getProductCostReport: builder.query<
+      { rows: ProductCostReportRow[]; totalDepartmentSalary: number },
+      ProductCostReportParams
     >({
       query: ({ from, to }) => ({
         url: `product-cost?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
         method: 'GET',
       }),
       transformResponse: (response: unknown) => {
-        const data = unwrapData<{ rows?: unknown[]; totalDepartmentSalary?: number }>(response);
+        const data = unwrapData<{ rows?: ProductCostReportRow[]; totalDepartmentSalary?: number }>(response);
         return {
-          rows: Array.isArray(data?.rows) ? data.rows as { productGroup: string; product: string; quantitySold: number; costFromIiko: number; departmentSalary: number; humanCost: number; currentPriceFromIiko: number }[] : [],
+          rows: Array.isArray(data?.rows) ? data.rows : [],
           totalDepartmentSalary: typeof data?.totalDepartmentSalary === 'number' ? data.totalDepartmentSalary : 0,
         };
       },
+      providesTags: (_result, _error, arg) => [{ type: 'ProductCostReport', id: `${arg.from}-${arg.to}` }],
+    }),
+
+    // Department salary report (зарплата по подразделениям) — query с кэшем по периоду
+    getDepartmentSalaryReport: builder.query<DepartmentSalaryReportRow[], DepartmentSalaryReportParams>({
+      query: ({ from, to }) => ({
+        url: `department-salary?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+        method: 'GET',
+      }),
+      transformResponse: (response: unknown) => {
+        const data = unwrapData<{ rows?: DepartmentSalaryReportRow[] }>(response);
+        return Array.isArray(data?.rows) ? data.rows : [];
+      },
+      providesTags: (_result, _error, arg) => [{ type: 'DepartmentSalaryReport', id: `${arg.from}-${arg.to}` }],
     }),
 
     // Store balance report (остатки по точкам/складам)
-    getStoreBalanceReport: builder.mutation<
-      {
-        pointName: string;
-        departmentId: string | null;
-        storeId: string;
-        productId: string;
-        productName: string | null;
-        productGroup: string | null;
-        amount: number;
-        sum: number;
-        totalSold: number;
-        salesByDay: { date: string; quantitySold: number }[];
-      }[],
-      { from?: string; to?: string } | void
-    >({
-      query: (params) => {
-        const search = new URLSearchParams();
-        if (params && params.from) search.set('from', params.from);
-        if (params && params.to) search.set('to', params.to);
-        const qs = search.toString();
-        return {
-          url: `store-balance${qs ? `?${qs}` : ''}`,
-          method: 'GET',
-        };
-      },
+    getStoreBalanceReport: builder.query<StoreBalanceReportRow[], StoreBalanceReportParams>({
+      query: ({ from, to }) => ({
+        url: `store-balance?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+        method: 'GET',
+      }),
       transformResponse: (response: unknown) => {
-        const data = unwrapData<{ rows?: unknown[] }>(response);
-        return (Array.isArray(data?.rows) ? data.rows : []) as {
-          pointName: string;
-          departmentId: string | null;
-          storeId: string;
-          productId: string;
-          productName: string | null;
-          productGroup: string | null;
-          amount: number;
-          sum: number;
-          totalSold: number;
-          salesByDay: { date: string; quantitySold: number }[];
-        }[];
+        const data = unwrapData<{ rows?: StoreBalanceReportRow[] }>(response);
+        return Array.isArray(data?.rows) ? data.rows : [];
       },
+      providesTags: (_result, _error, arg) => [{ type: 'StoreBalanceReport', id: `${arg.from}-${arg.to}` }],
     }),
 
     // Products reference (справочник номенклатуры)
@@ -411,9 +401,9 @@ export const api = createApi({
     }),
 
     // HR: departments, positions, employees, schedules
-    getDepartments: builder.query<any[], void>({
+    getDepartments: builder.query<ApiDepartment[], void>({
       query: () => 'departments',
-      transformResponse: (response: unknown) => unwrapData<any[]>(response) ?? [],
+      transformResponse: (response: unknown) => unwrapData<ApiDepartment[]>(response) ?? [],
       providesTags: ['Departments'],
     }),
     createDepartment: builder.mutation<
@@ -564,7 +554,7 @@ export const api = createApi({
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Schedules'],
+      invalidatesTags: ['Schedules', 'DepartmentSalaryReport', 'ProductCostReport'],
     }),
     updateSchedule: builder.mutation<
       any,
@@ -575,14 +565,14 @@ export const api = createApi({
         method: 'PUT',
         body: payload,
       }),
-      invalidatesTags: ['Schedules'],
+      invalidatesTags: ['Schedules', 'DepartmentSalaryReport', 'ProductCostReport'],
     }),
     deleteSchedule: builder.mutation<void, string>({
       query: (id) => ({
         url: `schedules/${encodeURIComponent(id)}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['Schedules'],
+      invalidatesTags: ['Schedules', 'DepartmentSalaryReport', 'ProductCostReport'],
     }),
   }),
 });
@@ -593,8 +583,9 @@ export const {
   useMeQuery,
   useGetIikoCredentialsQuery,
   useSaveIikoCredentialsMutation,
-  useGetProductCostReportMutation,
-  useGetStoreBalanceReportMutation,
+  useGetProductCostReportQuery,
+  useGetDepartmentSalaryReportQuery,
+  useGetStoreBalanceReportQuery,
   useGetProductsQuery,
   useSyncProductsMutation,
   useDeleteProductMutation,

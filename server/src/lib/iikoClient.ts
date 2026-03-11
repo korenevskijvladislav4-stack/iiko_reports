@@ -7,6 +7,17 @@ import crypto from 'node:crypto';
  * Все запросы: параметр key=TOKEN в query.
  */
 
+/** Ошибка авторизации iiko (401/403) — токен истёк или недействителен. */
+export class IikoAuthError extends Error {
+  constructor(
+    message: string,
+    public readonly statusCode?: number
+  ) {
+    super(message);
+    this.name = 'IikoAuthError';
+  }
+}
+
 function normalizeServerUrl(url: string): string {
   const u = url.trim().replace(/\/+$/, '');
   return u + '/resto/';
@@ -33,6 +44,9 @@ export async function getAccessToken(
   const res = await fetch(url, { method: 'GET' });
   if (!res.ok) {
     const text = await res.text();
+    if (res.status === 401 || res.status === 403) {
+      throw new IikoAuthError(`iiko auth failed: ${res.status} ${text}`, res.status);
+    }
     throw new Error(`iiko auth failed: ${res.status} ${text}`);
   }
   const token = (await res.text()).trim();
@@ -159,6 +173,9 @@ export async function fetchOlapReportV2(
   });
   if (!res.ok) {
     const text = await res.text();
+    if (res.status === 401 || res.status === 403) {
+      throw new IikoAuthError(`iiko OLAP v2 failed: ${res.status} ${text}`, res.status);
+    }
     throw new Error(`iiko OLAP v2 failed: ${res.status} ${text}`);
   }
   return res.text();
@@ -173,9 +190,11 @@ export async function fetchIikoDepartments(serverUrl: string, token: string): Pr
   const url = `${base}api/departments?key=${encodeURIComponent(token)}`;
   const res = await fetch(url, { method: 'GET' });
   if (!res.ok) {
-    // На некоторых установках этого эндпоинта может не быть — в этом случае просто пропускаем departmentId
     if (res.status === 404) return [];
     const text = await res.text();
+    if (res.status === 401 || res.status === 403) {
+      throw new IikoAuthError(`iiko departments failed: ${res.status} ${text}`, res.status);
+    }
     throw new Error(`iiko departments failed: ${res.status} ${text}`);
   }
   const data = await res.json();
@@ -199,6 +218,9 @@ export async function fetchIikoProducts(serverUrl: string, token: string): Promi
   const res = await fetch(url, { method: 'GET' });
   if (!res.ok) {
     const text = await res.text();
+    if (res.status === 401 || res.status === 403) {
+      throw new IikoAuthError(`iiko products failed: ${res.status} ${text}`, res.status);
+    }
     throw new Error(`iiko products failed: ${res.status} ${text}`);
   }
   const data = await res.json();

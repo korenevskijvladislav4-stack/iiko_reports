@@ -46,27 +46,28 @@ export default class PayTypesService {
   }
 
   async sync(companyId: string): Promise<string[]> {
-    const { serverUrl, token, hostKey } = await this.iikoCreds.getToken(companyId);
-    const to = new Date();
-    const from = new Date(to.getFullYear() - 2, to.getMonth(), to.getDate());
-    const fromStr = `${String(from.getDate()).padStart(2, '0')}.${String(from.getMonth() + 1).padStart(2, '0')}.${from.getFullYear()}`;
-    const toStr = `${String(to.getDate()).padStart(2, '0')}.${String(to.getMonth() + 1).padStart(2, '0')}.${to.getFullYear()}`;
-    const raw = await fetchOlapReportV2(serverUrl, token, {
-      report: 'SALES',
-      from: fromStr,
-      to: toStr,
-      groupByRowFields: ['PayTypes'],
-      aggregateFields: ['DishSumInt'],
-    });
-    const names = extractPayTypesFromOlap(raw);
-    for (const name of names) {
-      await prisma.companyPayType.upsert({
-        where: { companyId_hostKey_payType: { companyId, hostKey, payType: name } },
-        create: { companyId, hostKey, payType: name },
-        update: {},
+    return this.iikoCreds.withToken(companyId, async ({ serverUrl, token, hostKey }) => {
+      const to = new Date();
+      const from = new Date(to.getFullYear() - 2, to.getMonth(), to.getDate());
+      const fromStr = `${String(from.getDate()).padStart(2, '0')}.${String(from.getMonth() + 1).padStart(2, '0')}.${from.getFullYear()}`;
+      const toStr = `${String(to.getDate()).padStart(2, '0')}.${String(to.getMonth() + 1).padStart(2, '0')}.${to.getFullYear()}`;
+      const raw = await fetchOlapReportV2(serverUrl, token, {
+        report: 'SALES',
+        from: fromStr,
+        to: toStr,
+        groupByRowFields: ['PayTypes'],
+        aggregateFields: ['DishSumInt'],
       });
-    }
-    return names;
+      const names = extractPayTypesFromOlap(raw);
+      for (const name of names) {
+        await prisma.companyPayType.upsert({
+          where: { companyId_hostKey_payType: { companyId, hostKey, payType: name } },
+          create: { companyId, hostKey, payType: name },
+          update: {},
+        });
+      }
+      return names;
+    });
   }
 
   async delete(companyId: string, payType: string): Promise<boolean> {

@@ -67,42 +67,43 @@ export default class DeliveryFlagsService {
   }
 
   async sync(companyId: string): Promise<string[]> {
-    const { serverUrl, token, hostKey } = await this.iikoCreds.getToken(companyId);
-    const to = new Date();
-    const from = new Date(to.getFullYear() - 2, to.getMonth(), to.getDate());
-    const fromStr = `${String(from.getDate()).padStart(2, '0')}.${String(from.getMonth() + 1).padStart(2, '0')}.${from.getFullYear()}`;
-    const toStr = `${String(to.getDate()).padStart(2, '0')}.${String(to.getMonth() + 1).padStart(2, '0')}.${to.getFullYear()}`;
-    const olapParams = {
-      from: fromStr,
-      to: toStr,
-      groupByRowFields: ['Delivery.IsDelivery'] as const,
-      aggregateFields: ['DishSumInt'] as const,
-    };
-    const allValues = new Set<string>();
-    for (const reportType of ['SALES', 'DELIVERIES'] as const) {
-      try {
-        const raw = await fetchOlapReportV2(serverUrl, token, {
-          report: reportType,
-          from: olapParams.from,
-          to: olapParams.to,
-          groupByRowFields: [...olapParams.groupByRowFields],
-          aggregateFields: [...olapParams.aggregateFields],
-        });
-        const vals = extractValuesFromOlap(raw);
-        vals.forEach((v) => allValues.add(v));
-      } catch (e) {
-        if (reportType === 'DELIVERIES') continue;
-        throw e;
+    return this.iikoCreds.withToken(companyId, async ({ serverUrl, token, hostKey }) => {
+      const to = new Date();
+      const from = new Date(to.getFullYear() - 2, to.getMonth(), to.getDate());
+      const fromStr = `${String(from.getDate()).padStart(2, '0')}.${String(from.getMonth() + 1).padStart(2, '0')}.${from.getFullYear()}`;
+      const toStr = `${String(to.getDate()).padStart(2, '0')}.${String(to.getMonth() + 1).padStart(2, '0')}.${to.getFullYear()}`;
+      const olapParams = {
+        from: fromStr,
+        to: toStr,
+        groupByRowFields: ['Delivery.IsDelivery'] as const,
+        aggregateFields: ['DishSumInt'] as const,
+      };
+      const allValues = new Set<string>();
+      for (const reportType of ['SALES', 'DELIVERIES'] as const) {
+        try {
+          const raw = await fetchOlapReportV2(serverUrl, token, {
+            report: reportType,
+            from: olapParams.from,
+            to: olapParams.to,
+            groupByRowFields: [...olapParams.groupByRowFields],
+            aggregateFields: [...olapParams.aggregateFields],
+          });
+          const vals = extractValuesFromOlap(raw);
+          vals.forEach((v) => allValues.add(v));
+        } catch (e) {
+          if (reportType === 'DELIVERIES') continue;
+          throw e;
+        }
       }
-    }
-    const values = Array.from(allValues).sort();
-    await prisma.companyDeliveryFlag.deleteMany({ where: { companyId, hostKey } });
-    for (const value of values) {
-      await prisma.companyDeliveryFlag.create({
-        data: { companyId, hostKey, value },
-      });
-    }
-    return values;
+      const values = Array.from(allValues).sort();
+      await prisma.companyDeliveryFlag.deleteMany({ where: { companyId, hostKey } });
+      for (const value of values) {
+        await prisma.companyDeliveryFlag.create({
+          data: { companyId, hostKey, value },
+        });
+      }
+      return values;
+    });
   }
 
   async delete(companyId: string, value: string): Promise<void> {

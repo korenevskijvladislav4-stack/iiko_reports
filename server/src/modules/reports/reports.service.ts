@@ -11,22 +11,23 @@ export default class ReportsService {
   async getOlapReport(companyId: string, params: OlapV2Params): Promise<unknown> {
     const { report, from, to } = params;
     if (!report || !from || !to) throw new HttpBadRequestError('report, from and to required');
-    const creds = await this.iikoCreds.getToken(companyId);
-    const olapParams: OlapV2Params = {
-      report: params.report,
-      from: params.from,
-      to: params.to,
-      groupByRowFields: params.groupByRowFields,
-      groupByColFields: params.groupByColFields,
-      aggregateFields: params.aggregateFields,
-      filters: params.filters,
-    };
-    const key = cacheKey(`olap:${creds.hostKey}:`, olapParams);
-    const cached = get<unknown>(key);
-    if (cached !== undefined) return cached;
-    const raw = await fetchOlapReportV2(creds.serverUrl, creds.token, olapParams);
-    const parsed = JSON.parse(raw) as unknown;
-    set(key, parsed, OLAP_CACHE_TTL_MS);
-    return parsed;
+    return this.iikoCreds.withToken(companyId, async (creds) => {
+      const olapParams: OlapV2Params = {
+        report: params.report,
+        from: params.from,
+        to: params.to,
+        groupByRowFields: params.groupByRowFields,
+        groupByColFields: params.groupByColFields,
+        aggregateFields: params.aggregateFields,
+        filters: params.filters,
+      };
+      const key = cacheKey(`olap:${creds.hostKey}:`, olapParams);
+      const cached = get<unknown>(key);
+      if (cached !== undefined) return cached;
+      const raw = await fetchOlapReportV2(creds.serverUrl, creds.token, olapParams);
+      const parsed = JSON.parse(raw) as unknown;
+      set(key, parsed, OLAP_CACHE_TTL_MS);
+      return parsed;
+    });
   }
 }

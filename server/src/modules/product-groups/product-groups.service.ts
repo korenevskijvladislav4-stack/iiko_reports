@@ -65,26 +65,27 @@ export default class ProductGroupsService {
   }
 
   async sync(companyId: string): Promise<string[]> {
-    const { serverUrl, token, hostKey } = await this.iikoCreds.getToken(companyId);
-    const to = new Date();
-    const from = new Date(to.getFullYear() - 2, to.getMonth(), to.getDate());
-    const fromStr = `${String(from.getDate()).padStart(2, '0')}.${String(from.getMonth() + 1).padStart(2, '0')}.${from.getFullYear()}`;
-    const toStr = `${String(to.getDate()).padStart(2, '0')}.${String(to.getMonth() + 1).padStart(2, '0')}.${to.getFullYear()}`;
-    const raw = await fetchOlapReportV2(serverUrl, token, {
-      report: 'SALES',
-      from: fromStr,
-      to: toStr,
-      groupByRowFields: ['DishGroup'] as const,
-      aggregateFields: ['DishSumInt'] as const,
-    });
-    const values = extractValuesFromOlap(raw).sort();
-    await prisma.companyProductGroup.deleteMany({ where: { companyId, hostKey } });
-    for (const value of values) {
-      await prisma.companyProductGroup.create({
-        data: { companyId, hostKey, value },
+    return this.iikoCreds.withToken(companyId, async ({ serverUrl, token, hostKey }) => {
+      const to = new Date();
+      const from = new Date(to.getFullYear() - 2, to.getMonth(), to.getDate());
+      const fromStr = `${String(from.getDate()).padStart(2, '0')}.${String(from.getMonth() + 1).padStart(2, '0')}.${from.getFullYear()}`;
+      const toStr = `${String(to.getDate()).padStart(2, '0')}.${String(to.getMonth() + 1).padStart(2, '0')}.${to.getFullYear()}`;
+      const raw = await fetchOlapReportV2(serverUrl, token, {
+        report: 'SALES',
+        from: fromStr,
+        to: toStr,
+        groupByRowFields: ['DishGroup'] as const,
+        aggregateFields: ['DishSumInt'] as const,
       });
-    }
-    return values;
+      const values = extractValuesFromOlap(raw).sort();
+      await prisma.companyProductGroup.deleteMany({ where: { companyId, hostKey } });
+      for (const value of values) {
+        await prisma.companyProductGroup.create({
+          data: { companyId, hostKey, value },
+        });
+      }
+      return values;
+    });
   }
 
   async delete(companyId: string, value: string): Promise<void> {
